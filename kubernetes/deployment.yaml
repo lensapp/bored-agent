@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: heliograph-agent
+  labels:
+    app: heliograph-agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: heliograph-agent
+  template:
+    metadata:
+      labels:
+        app: heliograph-agent
+    spec:
+      containers:
+      - name: agent
+        image: heliograph-agent:latest

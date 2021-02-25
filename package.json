@@ -6,9 +6,8 @@
   "author": "Mirantis Inc.",
   "license": "UNLICENCED",
   "scripts": {
-    "dev": "yarn ts-node index.ts",
+    "dev": "skaffold dev --status-check=false",
     "dist": "yarn tsc",
-    "build-image": "docker build -t heliograph-agent:latest .",
     "lint": "yarn run eslint --ext js,ts --max-warnings=0 ."
   },
   "devDependencies": {

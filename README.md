@@ -1,4 +1,4 @@
-# Heliograph Agent
+# BoreD Agent
 
-Agent for Heliograph tunnel server.
+Agent for BoreD tunnel server.
 

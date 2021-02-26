@@ -7,18 +7,18 @@ metadata:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: bored-agent
+  name: bored-agent-secret
   namespace: default
 rules:
 - apiGroups: [""]
   resources: ["secrets"]
-  verbs: ["get", "create", "update", "patch"]
   resourceNames: ["bored-agent-cert"]
+  verbs: ["get", "update", "patch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: bored-agent
+  name: bored-agent-impersonate
 rules:
 - apiGroups: [""]
   resources: ["users", "groups"]
@@ -32,9 +32,10 @@ metadata:
 subjects:
 - kind: ServiceAccount
   name: bored-agent
+  namespace: default
 roleRef:
   kind: Role
-  name: bored-agent
+  name: bored-agent-secret
   apiGroup: rbac.authorization.k8s.io
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -45,7 +46,8 @@ metadata:
 subjects:
 - kind: ServiceAccount
   name: bored-agent
+  namespace: default
 roleRef:
   kind: ClusterRole
-  name: bored-agent
+  name: bored-agent-impersonate
   apiGroup: rbac.authorization.k8s.io

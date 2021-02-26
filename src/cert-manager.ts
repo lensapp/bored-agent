@@ -10,11 +10,11 @@ const certSecretName = process.env.CERT_SECRET || "bored-agent-cert";
 const namespace = process.env.NAMESPACE;
 
 export class CertManager {
-  private kubeClient: k8s.KubeConfig;
+  private kubeConfig: k8s.KubeConfig;
 
   constructor() {
-    this.kubeClient = new k8s.KubeConfig();
-    this.kubeClient.loadFromDefault();
+    this.kubeConfig = new k8s.KubeConfig();
+    this.kubeConfig.loadFromCluster();
   }
 
   async ensureCerts(): Promise<SelfSignedCerts> {
@@ -25,15 +25,13 @@ export class CertManager {
     let secret: {
       body: k8s.V1Secret;
     };
-    const apiClient = this.kubeClient.makeApiClient(k8s.CoreV1Api);
+    const apiClient = this.kubeConfig.makeApiClient(k8s.CoreV1Api);
 
     try {
       secret = await apiClient.readNamespacedSecret(certSecretName, namespace);
     } catch(err) {
-      console.error(err);
       throw new Error("failed to read cert secret");
     }
-
 
     if (!secret) {
       throw new Error(`cannot find secret: ${certSecretName}`);
@@ -50,14 +48,20 @@ export class CertManager {
     }
 
     const pems: SelfSignedCerts = selfsigned.generate([], { days: 3650 });
-
-    apiClient.patchNamespacedSecret(certSecretName, namespace, {
-      data: {
-        "private": Buffer.from(pems.private).toString("base64"),
-        "public": Buffer.from(pems.public).toString("base64")
+    const patch = [
+      {
+        "op": "replace",
+        "path":"/data",
+        "value": {
+          "private": Buffer.from(pems.private).toString("base64"),
+          "public": Buffer.from(pems.public).toString("base64")
+        }
       }
-    });
+    ];
 
+    apiClient.patchNamespacedSecret(certSecretName, namespace, patch, undefined, undefined, undefined, undefined, {
+      "headers": { "Content-type": k8s.PatchUtils.PATCH_FORMAT_JSON_PATCH }
+    });
 
     return pems;
   }

@@ -1,23 +1,23 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: heliograph-agent
+  name: bored-agent
   labels:
-    app: heliograph-agent
+    app: bored-agent
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: heliograph-agent
+      app: bored-agent
   template:
     metadata:
       labels:
-        app: heliograph-agent
+        app: bored-agent
     spec:
-      serviceAccountName: heliograph-agent
+      serviceAccountName: bored-agent
       containers:
       - name: agent
-        image: heliograph-agent:latest
+        image: bored-agent:latest
         env:
           - name: NAMESPACE
             valueFrom:
@@ -27,6 +27,6 @@ spec:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: heliograph-agent-cert
+  name: bored-agent-cert
   labels:
-    app: heliograph-agent
+    app: bored-agent

@@ -6,7 +6,7 @@ export type SelfSignedCerts = {
   public: string;
 };
 
-const certSecretName = process.env.CERT_SECRET || "heliograph-agent-cert";
+const certSecretName = process.env.CERT_SECRET || "bored-agent-cert";
 const namespace = process.env.NAMESPACE;
 
 export class CertManager {

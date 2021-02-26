@@ -2,10 +2,10 @@ import { AgentProxy } from "./src/agent-proxy";
 import { CertManager } from "./src/cert-manager";
 import { version } from "./package.json";
 
-console.log(`~~ Heliograph Agent v${version} ~~`);
+console.log(`~~ BoreD Agent v${version} ~~`);
 
 const proxy = new AgentProxy({
-  tunnelServer: "http://heliograph:8080/lens-agent/connect"
+  tunnelServer: "http://bored:8080/lens-agent/connect"
 });
 
 const certManager = new CertManager();

@@ -5,7 +5,7 @@ import { version } from "./package.json";
 console.log(`~~ BoreD Agent v${version} ~~`);
 
 const proxy = new AgentProxy({
-  tunnelServer: "http://bored:8080/lens-agent/connect"
+  tunnelServer: process.env.TUNNEL_SERVER || "http://bored:8080"
 });
 
 const certManager = new CertManager();

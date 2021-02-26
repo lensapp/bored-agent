@@ -20,6 +20,8 @@
     "typescript": "^4.1.5"
   },
   "dependencies": {
+    "@kubernetes/client-node": "^0.14.0",
+    "selfsigned": "^1.10.8",
     "ws": "^7.4.3",
     "yamux-js": "^0.0.2"
   }

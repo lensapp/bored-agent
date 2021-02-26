@@ -3,6 +3,7 @@ import { Server } from "yamux-js";
 import type { Duplex } from "stream";
 import * as tls from "tls";
 import * as fs from "fs";
+import { SelfSignedCerts } from "./cert-manager";
 
 export type AgentProxyOptions = {
   tunnelServer: string;
@@ -16,6 +17,7 @@ export class AgentProxy {
   private ws?: WebSocket;
   private caCert?: Buffer;
   private tlsSession?: Buffer;
+  private certs?: SelfSignedCerts;
 
   constructor(opts: AgentProxyOptions) {
     this.tunnelServer = opts.tunnelServer;
@@ -25,19 +27,25 @@ export class AgentProxy {
     }
   }
 
-  connect() {
-    console.log("establishing reverse tunnel ...");
+  init(certs: SelfSignedCerts) {
+    this.certs = certs;
+  }
+
+  connect(reconnect = false) {
+    if (!reconnect) console.log(`PROXY: establishing reverse tunnel to ${this.tunnelServer} ...`);
     let retryTimeout: NodeJS.Timeout;
+    let connected = false;
 
     this.ws = new WebSocket(this.tunnelServer);
     this.ws.on("open", () => {
       if (!this.ws) return;
 
-      console.log("tunnel connection opened");
+      console.log("PROXY: tunnel connection opened");
+      connected = true;
       this.yamuxServer = new Server(this.handleRequestStream.bind(this));
 
       this.yamuxServer.on("error", (error) => {
-        console.error("yamux server error", error);
+        console.error("YAMUX: server error", error);
       });
 
       const wsDuplex = WebSocket.createWebSocketStream(this.ws);
@@ -48,7 +56,7 @@ export class AgentProxy {
     const retry = () => {
       clearTimeout(retryTimeout);
       retryTimeout = setTimeout(() => {
-        this.connect();
+        this.connect(true);
       }, 1000);
     };
 
@@ -59,7 +67,7 @@ export class AgentProxy {
       retry();
     });
     this.ws.on("close", () => {
-      console.log("tunnel connection closed ...");
+      if (connected) console.log("PROXY: tunnel connection closed...");
       retry();
     });
   }

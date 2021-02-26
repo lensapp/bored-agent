@@ -36,7 +36,11 @@ export class AgentProxy {
     let retryTimeout: NodeJS.Timeout;
     let connected = false;
 
-    this.ws = new WebSocket(this.tunnelServer);
+    this.ws = new WebSocket(this.tunnelServer, {
+      headers: {
+        "X-BoreD-PublicKey": Buffer.from(this.certs?.public || "").toString("base64")
+      }
+    });
     this.ws.on("open", () => {
       if (!this.ws) return;
 

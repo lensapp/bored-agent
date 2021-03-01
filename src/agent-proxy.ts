@@ -6,13 +6,15 @@ import * as fs from "fs";
 import { SelfSignedCerts } from "./cert-manager";
 
 export type AgentProxyOptions = {
-  tunnelServer: string;
+  boredServer: string;
+  boredToken: string;
 };
 
 const caCert = process.env.CA_CERT || "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt";
 
 export class AgentProxy {
-  private tunnelServer: string;
+  private boredServer: string;
+  private boredToken: string;
   private yamuxServer?: Server;
   private ws?: WebSocket;
   private caCert?: Buffer;
@@ -20,7 +22,8 @@ export class AgentProxy {
   private certs?: SelfSignedCerts;
 
   constructor(opts: AgentProxyOptions) {
-    this.tunnelServer = opts.tunnelServer;
+    this.boredServer = opts.boredServer;
+    this.boredToken = opts.boredToken;
 
     if (fs.existsSync(caCert)) {
       this.caCert = fs.readFileSync(caCert);
@@ -32,12 +35,13 @@ export class AgentProxy {
   }
 
   connect(reconnect = false) {
-    if (!reconnect) console.log(`PROXY: establishing reverse tunnel to ${this.tunnelServer} ...`);
+    if (!reconnect) console.log(`PROXY: establishing reverse tunnel to ${this.boredServer} ...`);
     let retryTimeout: NodeJS.Timeout;
     let connected = false;
 
-    this.ws = new WebSocket(`${this.tunnelServer}/agent/connect`, {
+    this.ws = new WebSocket(`${this.boredServer}/agent/connect`, {
       headers: {
+        "Authorization": `Bearer ${this.boredToken}`,
         "X-BoreD-PublicKey": Buffer.from(this.certs?.public || "").toString("base64")
       }
     });

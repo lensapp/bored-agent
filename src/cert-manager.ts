@@ -1,5 +1,5 @@
-import * as k8s from "@kubernetes/client-node";
-import * as selfsigned from "selfsigned";
+import { KubeConfig, CoreV1Api, V1Secret, PatchUtils } from "@kubernetes/client-node";
+import { generateKeyPair } from "crypto";
 
 export type SelfSignedCerts = {
   private: string;
@@ -10,10 +10,10 @@ const certSecretName = process.env.CERT_SECRET || "bored-agent-cert";
 const namespace = process.env.NAMESPACE;
 
 export class CertManager {
-  private kubeConfig: k8s.KubeConfig;
+  private kubeConfig: KubeConfig;
 
   constructor() {
-    this.kubeConfig = new k8s.KubeConfig();
+    this.kubeConfig = new KubeConfig();
     this.kubeConfig.loadFromCluster();
   }
 
@@ -23,9 +23,9 @@ export class CertManager {
     }
 
     let secret: {
-      body: k8s.V1Secret;
+      body: V1Secret;
     };
-    const apiClient = this.kubeConfig.makeApiClient(k8s.CoreV1Api);
+    const apiClient = this.kubeConfig.makeApiClient(CoreV1Api);
 
     try {
       secret = await apiClient.readNamespacedSecret(certSecretName, namespace);
@@ -47,7 +47,7 @@ export class CertManager {
       };
     }
 
-    const pems: SelfSignedCerts = selfsigned.generate([], { days: 3650 });
+    const pems = await this.generateKeys();
     const patch = [
       {
         "op": "replace",
@@ -60,9 +60,26 @@ export class CertManager {
     ];
 
     apiClient.patchNamespacedSecret(certSecretName, namespace, patch, undefined, undefined, undefined, undefined, {
-      "headers": { "Content-type": k8s.PatchUtils.PATCH_FORMAT_JSON_PATCH }
+      "headers": { "Content-type": PatchUtils.PATCH_FORMAT_JSON_PATCH }
     });
 
     return pems;
+  }
+
+  async generateKeys(): Promise<SelfSignedCerts> {
+    return new Promise((resolve, reject) => {
+      generateKeyPair("rsa", {
+        modulusLength: 4096
+      }, (err, publicKey, privateKey) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve({
+            public: publicKey.export({ type: "pkcs1", format: "pem"}).toString(),
+            private: privateKey.export({ type: "pkcs1", format: "pem"}).toString()
+          });
+        }
+      });
+    });
   }
 }

@@ -3,7 +3,9 @@ import { Server } from "yamux-js";
 import type { Duplex } from "stream";
 import * as tls from "tls";
 import * as fs from "fs";
-import { SelfSignedCerts } from "./cert-manager";
+import { createDecipheriv, createCipheriv } from "crypto";
+import { KeyPair } from "./keypair-manager";
+import { StreamParser } from "./stream-parser";
 
 export type AgentProxyOptions = {
   boredServer: string;
@@ -19,7 +21,8 @@ export class AgentProxy {
   private ws?: WebSocket;
   private caCert?: Buffer;
   private tlsSession?: Buffer;
-  private certs?: SelfSignedCerts;
+  private keys?: KeyPair;
+  private retryTimeout?: NodeJS.Timeout;
 
   constructor(opts: AgentProxyOptions) {
     this.boredServer = opts.boredServer;
@@ -30,27 +33,26 @@ export class AgentProxy {
     }
   }
 
-  init(certs: SelfSignedCerts) {
-    this.certs = certs;
+  init(keys: KeyPair) {
+    this.keys = keys;
   }
 
   connect(reconnect = false) {
     if (!reconnect) console.log(`PROXY: establishing reverse tunnel to ${this.boredServer} ...`);
-    let retryTimeout: NodeJS.Timeout;
-    let connected = false;
 
     this.ws = new WebSocket(`${this.boredServer}/agent/connect`, {
       headers: {
         "Authorization": `Bearer ${this.boredToken}`,
-        "X-BoreD-PublicKey": Buffer.from(this.certs?.public || "").toString("base64")
+        "X-BoreD-PublicKey": Buffer.from(this.keys?.public || "").toString("base64")
       }
     });
     this.ws.on("open", () => {
       if (!this.ws) return;
 
       console.log("PROXY: tunnel connection opened");
-      connected = true;
-      this.yamuxServer = new Server(this.handleRequestStream.bind(this));
+      this.yamuxServer = new Server(this.handleRequestStream.bind(this), {
+        enableKeepAlive: false
+      });
 
       this.yamuxServer.on("error", (error) => {
         console.error("YAMUX: server error", error);
@@ -62,20 +64,21 @@ export class AgentProxy {
     });
 
     const retry = () => {
-      clearTimeout(retryTimeout);
-      retryTimeout = setTimeout(() => {
+      if (this.retryTimeout) clearTimeout(this.retryTimeout);
+      this.retryTimeout = setTimeout(() => {
         this.connect(true);
       }, 1000);
     };
 
-    this.ws.on("error", () => {
+    this.ws.on("error", (err) => {
+      console.error("PROXY: websocket error", err);
       retry();
     });
     this.ws.on("unexpected-response", () => {
       retry();
     });
     this.ws.on("close", () => {
-      if (connected) console.log("PROXY: tunnel connection closed...");
+      console.log("PROXY: tunnel connection closed...");
       retry();
     });
   }
@@ -83,7 +86,7 @@ export class AgentProxy {
   handleRequestStream(stream: Duplex) {
     const opts: tls.ConnectionOptions = {
       host: process.env.KUBERNETES_HOST || "kubernetes.default.svc",
-      port: parseInt(process.env.KUBERNETES_PORT || "443")
+      port: parseInt(process.env.KUBERNETES_SERVICE_PORT || "443")
     };
 
     if (this.caCert) {
@@ -101,14 +104,23 @@ export class AgentProxy {
     }
 
     const socket = tls.connect(opts, () => {
-      console.log("connected to k8s api");
-      stream.pipe(socket).pipe(stream);
+      const parser = new StreamParser();
+
+      parser.bodyParser = (key: Buffer, iv: Buffer) => {
+        const decipher = createDecipheriv("aes-256-gcm", key, iv);
+        const cipher = createCipheriv("aes-256-gcm", key, iv);
+
+        parser.pipe(decipher).pipe(socket).pipe(cipher).pipe(stream);
+      };
+
+      parser.privateKey = this.keys?.private || "";
+
+      stream.pipe(parser);
     });
 
     socket.on("session", (session) => {
       this.tlsSession = session;
     });
-
 
     stream.on("end", () => {
       console.log("request ended");

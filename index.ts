@@ -1,5 +1,5 @@
 import { AgentProxy } from "./src/agent-proxy";
-import { CertManager } from "./src/cert-manager";
+import { KeyPairManager } from "./src/keypair-manager";
 import { version } from "./package.json";
 
 console.log(`~~ BoreD Agent v${version} ~~`);
@@ -18,10 +18,10 @@ const proxy = new AgentProxy({
   boredToken
 });
 
-const certManager = new CertManager();
+const keyPairManager = new KeyPairManager();
 
-certManager.ensureCerts().then((certs) => {
-  proxy.init(certs);
+keyPairManager.ensureCerts().then((keys) => {
+  proxy.init(keys);
   proxy.connect();
 }).catch((reason) => {
   console.error("failed to create certificates", reason);

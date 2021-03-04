@@ -1,7 +1,7 @@
 import { KubeConfig, CoreV1Api, V1Secret, PatchUtils } from "@kubernetes/client-node";
 import { generateKeyPair } from "crypto";
 
-export type SelfSignedCerts = {
+export type KeyPair = {
   private: string;
   public: string;
 };
@@ -9,7 +9,7 @@ export type SelfSignedCerts = {
 const certSecretName = process.env.CERT_SECRET || "bored-agent-cert";
 const namespace = process.env.NAMESPACE;
 
-export class CertManager {
+export class KeyPairManager {
   private kubeConfig: KubeConfig;
 
   constructor() {
@@ -17,7 +17,7 @@ export class CertManager {
     this.kubeConfig.loadFromCluster();
   }
 
-  async ensureCerts(): Promise<SelfSignedCerts> {
+  async ensureCerts(): Promise<KeyPair> {
     if (!namespace) {
       throw new Error("cannot resolve pod namespace");
     }
@@ -66,7 +66,7 @@ export class CertManager {
     return pems;
   }
 
-  async generateKeys(): Promise<SelfSignedCerts> {
+  async generateKeys(): Promise<KeyPair> {
     return new Promise((resolve, reject) => {
       generateKeyPair("rsa", {
         modulusLength: 4096

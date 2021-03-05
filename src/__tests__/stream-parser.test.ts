@@ -16,7 +16,7 @@ describe("StreamParser", () => {
     parser.privateKey = keys.private;
     let parsedKey = "";
 
-    parser.bodyParser = (key, iv) => {
+    parser.bodyParser = (key) => {
       parsedKey = key.toString();
     };
 

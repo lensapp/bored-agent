@@ -1,4 +1,4 @@
 # BoreD Agent
 
-Agent for BoreD tunnel server.
+Agent for [BoreD](https://github.com/lensapp/bored) tunnel daemon.
 

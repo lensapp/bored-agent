@@ -4,7 +4,7 @@
   "description": "Bored Agent",
   "main": "dist/index.js",
   "author": "Mirantis Inc.",
-  "license": "UNLICENCED",
+  "license": "MIT",
   "scripts": {
     "dev": "skaffold dev --status-check=false",
     "dist": "yarn tsc",

@@ -7,28 +7,26 @@ export type KeyPair = {
 };
 
 const certSecretName = process.env.CERT_SECRET || "bored-agent-cert";
-const namespace = process.env.NAMESPACE;
 
 export class KeyPairManager {
   private kubeConfig: KubeConfig;
+  private namespace: string;
+  private apiClient: CoreV1Api;
 
-  constructor() {
+  constructor(namespace: string) {
+    this.namespace = namespace;
     this.kubeConfig = new KubeConfig();
     this.kubeConfig.loadFromCluster();
+    this.apiClient = this.kubeConfig.makeApiClient(CoreV1Api);
   }
 
-  async ensureCerts(): Promise<KeyPair> {
-    if (!namespace) {
-      throw new Error("cannot resolve pod namespace");
-    }
-
+  protected async fetchExistingKeys(): Promise<KeyPair> {
     let secret: {
       body: V1Secret;
     };
-    const apiClient = this.kubeConfig.makeApiClient(CoreV1Api);
 
     try {
-      secret = await apiClient.readNamespacedSecret(certSecretName, namespace);
+      secret = await this.apiClient.readNamespacedSecret(certSecretName, this.namespace);
     } catch(err) {
       throw new Error("failed to read cert secret");
     }
@@ -40,30 +38,44 @@ export class KeyPairManager {
     const privateKey = secret.body.data?.["private"] || "";
     const publicKey = secret.body.data?.["public"] || "";
 
-    if (privateKey !== "" && publicKey !== "") {
-      return {
-        private: Buffer.from(privateKey, "base64").toString("utf-8"),
-        public: Buffer.from(publicKey, "base64").toString("utf-8")
-      };
-    }
+    return {
+      private: privateKey,
+      public: publicKey
+    };
+  }
 
-    const pems = await this.generateKeys();
+  protected async storeKeys(keys: KeyPair) {
     const patch = [
       {
         "op": "replace",
         "path":"/data",
         "value": {
-          "private": Buffer.from(pems.private).toString("base64"),
-          "public": Buffer.from(pems.public).toString("base64")
+          "private": Buffer.from(keys.private).toString("base64"),
+          "public": Buffer.from(keys.public).toString("base64")
         }
       }
     ];
 
-    apiClient.patchNamespacedSecret(certSecretName, namespace, patch, undefined, undefined, undefined, undefined, {
+    return this.apiClient.patchNamespacedSecret(certSecretName, this.namespace, patch, undefined, undefined, undefined, undefined, {
       "headers": { "Content-type": PatchUtils.PATCH_FORMAT_JSON_PATCH }
     });
+  }
 
-    return pems;
+  async ensureKeys(): Promise<KeyPair> {
+    const existingKeys = await this.fetchExistingKeys();
+
+    if (existingKeys.private !== "" && existingKeys.public !== "") {
+      return {
+        private: Buffer.from(existingKeys.private, "base64").toString("utf-8"),
+        public: Buffer.from(existingKeys.public, "base64").toString("utf-8")
+      };
+    }
+
+    const keys = await this.generateKeys();
+
+    await this.storeKeys(keys);
+
+    return keys;
   }
 
   async generateKeys(): Promise<KeyPair> {

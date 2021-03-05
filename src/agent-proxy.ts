@@ -23,6 +23,7 @@ export class AgentProxy {
   private tlsSession?: Buffer;
   private keys?: KeyPair;
   private retryTimeout?: NodeJS.Timeout;
+  private cipherAlgorithm = "aes-256-gcm";
 
   constructor(opts: AgentProxyOptions) {
     this.boredServer = opts.boredServer;
@@ -94,7 +95,7 @@ export class AgentProxy {
     } else {
       opts.rejectUnauthorized = false;
 
-      opts.checkServerIdentity = (host, cert) => {
+      opts.checkServerIdentity = () => {
         return undefined;
       };
     }
@@ -107,8 +108,8 @@ export class AgentProxy {
       const parser = new StreamParser();
 
       parser.bodyParser = (key: Buffer, iv: Buffer) => {
-        const decipher = createDecipheriv("aes-256-gcm", key, iv);
-        const cipher = createCipheriv("aes-256-gcm", key, iv);
+        const decipher = createDecipheriv(this.cipherAlgorithm, key, iv);
+        const cipher = createCipheriv(this.cipherAlgorithm, key, iv);
 
         parser.pipe(decipher).pipe(socket).pipe(cipher).pipe(stream);
       };

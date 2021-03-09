@@ -6,6 +6,7 @@ import * as fs from "fs";
 import { createDecipheriv, createCipheriv } from "crypto";
 import { KeyPair } from "./keypair-manager";
 import { StreamParser } from "./stream-parser";
+import { StreamImpersonator } from "./stream-impersonator";
 
 export type AgentProxyOptions = {
   boredServer: string;
@@ -13,17 +14,19 @@ export type AgentProxyOptions = {
 };
 
 const caCert = process.env.CA_CERT || "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt";
+const serviceAccountTokenPath = process.env.SERVICEACCOUNT_TOKEN_PATH || "/var/run/secrets/kubernetes.io/serviceaccount/token";
 
 export class AgentProxy {
   private boredServer: string;
   private boredToken: string;
+  private cipherAlgorithm = "aes-256-gcm";
   private yamuxServer?: Server;
   private ws?: WebSocket;
   private caCert?: Buffer;
   private tlsSession?: Buffer;
   private keys?: KeyPair;
   private retryTimeout?: NodeJS.Timeout;
-  private cipherAlgorithm = "aes-256-gcm";
+  private serviceAccountToken?: Buffer;
 
   constructor(opts: AgentProxyOptions) {
     this.boredServer = opts.boredServer;
@@ -31,6 +34,10 @@ export class AgentProxy {
 
     if (fs.existsSync(caCert)) {
       this.caCert = fs.readFileSync(caCert);
+    }
+
+    if (fs.existsSync(serviceAccountTokenPath)) {
+      this.serviceAccountToken = fs.readFileSync(serviceAccountTokenPath);
     }
   }
 
@@ -111,7 +118,14 @@ export class AgentProxy {
         const decipher = createDecipheriv(this.cipherAlgorithm, key, iv);
         const cipher = createCipheriv(this.cipherAlgorithm, key, iv);
 
-        parser.pipe(decipher).pipe(socket).pipe(cipher).pipe(stream);
+        if (this.serviceAccountToken) {
+          const streamImpersonator = new StreamImpersonator();
+
+          streamImpersonator.saToken = this.serviceAccountToken.toString();
+          parser.pipe(decipher).pipe(streamImpersonator).pipe(socket).pipe(cipher).pipe(stream);
+        } else {
+          parser.pipe(decipher).pipe(socket).pipe(cipher).pipe(stream);
+        }
       };
 
       parser.privateKey = this.keys?.private || "";

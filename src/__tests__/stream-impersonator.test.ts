@@ -65,23 +65,17 @@ MwIDAQAB
 
     const token = jwt.sign({
       exp: Math.floor(Date.now() / 1000) + (60 * 60),
-      sub: "johndoe",
-      roles: ["dev", "test"]
+      sub: "johndoe"
     }, jwtPrivateKey, { algorithm: "RS256" });
 
     stream.pipe(parser).pipe(destination);
     stream.write("GET / HTTP/1.1\r\n");
     stream.write("Accept: application/json\r\n");
-    stream.write(`Authorization: Bearer ${token}\r\n`);
-    stream.write("Content-Type: application/json\r\n\r\n");
-    stream.write("hello world");
+    stream.write("Content-Type: application/json\r\n");
+    stream.write(`Authorization: Bearer ${token}\r\n\r\n`);
 
-    const data = destination.buffer.toString().split("\r\n");
+    expect(destination.buffer.toString()).toMatchSnapshot();
 
-    expect(data).toContain("Authorization: Bearer service-account-token");
-    expect(data).toContain("Impersonate-User: johndoe");
-    expect(data).toContain("Impersonate-Group: dev");
-    expect(data).toContain("Impersonate-Group: test");
   });
 
   it("does not impersonate on invalid token", async () => {
@@ -99,9 +93,6 @@ MwIDAQAB
     stream.write("Content-Type: application/json\r\n\r\n");
     stream.write("hello world");
 
-    const data = destination.buffer.toString().split("\r\n");
-
-    expect(data).toContain("Authorization: Bearer invalid.token.is");
-    expect(data).not.toContain("Impersonate-User: johndoe");
+    expect(destination.buffer.toString()).toMatchSnapshot();
   });
 });

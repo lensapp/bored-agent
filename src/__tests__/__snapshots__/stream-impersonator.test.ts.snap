@@ -1,0 +1,20 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`StreamImpersonator does not impersonate on invalid token 1`] = `
+"GET / HTTP/1.1
+Accept: application/json
+Authorization: Bearer invalid.token.is
+Content-Type: application/json
+
+hello world"
+`;
+
+exports[`StreamImpersonator impersonates on valid jwt token 1`] = `
+"GET / HTTP/1.1
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer service-account-token
+Impersonate-User: johndoe
+
+"
+`;

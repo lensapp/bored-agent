@@ -6,31 +6,41 @@ import * as fs from "fs";
 import { createDecipheriv, createCipheriv } from "crypto";
 import { KeyPair } from "./keypair-manager";
 import { StreamParser } from "./stream-parser";
+import { StreamImpersonator } from "./stream-impersonator";
 
 export type AgentProxyOptions = {
   boredServer: string;
   boredToken: string;
+  idpPublicKey: string;
 };
 
 const caCert = process.env.CA_CERT || "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt";
+const serviceAccountTokenPath = process.env.SERVICEACCOUNT_TOKEN_PATH || "/var/run/secrets/kubernetes.io/serviceaccount/token";
 
 export class AgentProxy {
   private boredServer: string;
   private boredToken: string;
+  private idpPublicKey: string;
+  private cipherAlgorithm = "aes-256-gcm";
   private yamuxServer?: Server;
   private ws?: WebSocket;
   private caCert?: Buffer;
   private tlsSession?: Buffer;
   private keys?: KeyPair;
   private retryTimeout?: NodeJS.Timeout;
-  private cipherAlgorithm = "aes-256-gcm";
+  private serviceAccountToken?: Buffer;
 
   constructor(opts: AgentProxyOptions) {
     this.boredServer = opts.boredServer;
     this.boredToken = opts.boredToken;
+    this.idpPublicKey = opts.idpPublicKey;
 
     if (fs.existsSync(caCert)) {
       this.caCert = fs.readFileSync(caCert);
+    }
+
+    if (fs.existsSync(serviceAccountTokenPath)) {
+      this.serviceAccountToken = fs.readFileSync(serviceAccountTokenPath);
     }
   }
 
@@ -78,8 +88,8 @@ export class AgentProxy {
     this.ws.on("unexpected-response", () => {
       retry();
     });
-    this.ws.on("close", () => {
-      console.log("PROXY: tunnel connection closed...");
+    this.ws.on("close", (code: number) => {
+      console.log(`PROXY: tunnel connection closed (code: ${code})`);
       retry();
     });
   }
@@ -87,7 +97,7 @@ export class AgentProxy {
   handleRequestStream(stream: Duplex) {
     const opts: tls.ConnectionOptions = {
       host: process.env.KUBERNETES_HOST || "kubernetes.default.svc",
-      port: parseInt(process.env.KUBERNETES_SERVICE_PORT || "443")
+      port: parseInt(process.env.KUBERNETES_SERVICE_PORT || "443"),
     };
 
     if (this.caCert) {
@@ -111,12 +121,24 @@ export class AgentProxy {
         const decipher = createDecipheriv(this.cipherAlgorithm, key, iv);
         const cipher = createCipheriv(this.cipherAlgorithm, key, iv);
 
-        parser.pipe(decipher).pipe(socket).pipe(cipher).pipe(stream);
+        if (this.serviceAccountToken && this.idpPublicKey !== "") {
+          const streamImpersonator = new StreamImpersonator();
+
+          streamImpersonator.publicKey = this.idpPublicKey;
+          streamImpersonator.saToken = this.serviceAccountToken.toString();
+          parser.pipe(decipher).pipe(streamImpersonator).pipe(socket).pipe(cipher).pipe(stream);
+        } else {
+          parser.pipe(decipher).pipe(socket).pipe(cipher).pipe(stream);
+        }
       };
 
       parser.privateKey = this.keys?.private || "";
 
       stream.pipe(parser);
+    });
+
+    socket.on("end", () => {
+      stream.end();
     });
 
     socket.on("session", (session) => {

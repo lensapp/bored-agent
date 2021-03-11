@@ -7,6 +7,7 @@ console.log(`~~ BoreD Agent v${version} ~~`);
 const boredServer = process.env.BORED_SERVER || "http://bored:8080";
 const boredToken = process.env.BORED_TOKEN;
 const namespace = process.env.NAMESPACE;
+const idpPublicKey = process.env.IDP_PUBLIC_KEY || "";
 
 if (!boredToken) {
   console.error("BORED_TOKEN not set, quitting.");
@@ -22,7 +23,8 @@ if (!namespace) {
 
 const proxy = new AgentProxy({
   boredServer,
-  boredToken
+  boredToken,
+  idpPublicKey
 });
 
 const keyPairManager = new KeyPairManager(namespace);

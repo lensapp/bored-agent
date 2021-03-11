@@ -5,7 +5,7 @@ type TokenPayload = {
   exp: number;
   aud: string;
   sub: string;
-  roles: string[];
+  groups: string[];
 };
 
 export class StreamImpersonator extends Transform {
@@ -81,9 +81,9 @@ export class StreamImpersonator extends Transform {
       const impersonatedHeaders: Buffer[] = [Buffer.from(this.saToken), StreamImpersonator.newlineBuffer];
 
       impersonatedHeaders.push(Buffer.from(`Impersonate-User: ${tokenData.sub}`));
-      tokenData?.roles?.forEach((role) => {
+      tokenData?.groups?.forEach((group) => {
         impersonatedHeaders.push(StreamImpersonator.newlineBuffer);
-        impersonatedHeaders.push(Buffer.from(`Impersonate-Group: ${role}`));
+        impersonatedHeaders.push(Buffer.from(`Impersonate-Group: ${group}`));
       });
 
       const index = chunk.indexOf(token);

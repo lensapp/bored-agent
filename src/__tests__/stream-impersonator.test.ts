@@ -74,6 +74,26 @@ MwIDAQAB
     expect(destination.buffer.toString()).toMatchSnapshot();
   });
 
+  it ("impersonates groups on valid jwt token", async () => {
+    const stream = new PassThrough();
+    const parser = new StreamImpersonator();
+    const destination = new DummyWritable();
+
+    parser.saToken = "service-account-token";
+    parser.publicKey = jwtPublicKey;
+
+    const token = jwt.sign({
+      exp: Math.floor(Date.now() / 1000) + (60 * 60),
+      sub: "johndoe",
+      groups: ["dev", "ops"]
+    }, jwtPrivateKey, { algorithm: "RS256" });
+
+    stream.pipe(parser).pipe(destination);
+    stream.write(`GET / HTTP/1.1\r\nAccept: application/json\r\nContent-`);
+    stream.write(`Type: application/json\r\nAuthorization: Bearer ${token}\r\n\r\n`);
+    expect(destination.buffer.toString()).toMatchSnapshot();
+  });
+
   it ("handles newline splitted to separate chunks", async () => {
     const stream = new PassThrough();
     const parser = new StreamImpersonator();

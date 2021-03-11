@@ -8,11 +8,12 @@ type TokenPayload = {
   roles: string[];
 };
 
-const newlineBuffer = Buffer.from("\r\n");
-const bodySeparatorBuffer = Buffer.from("\r\n\r\n");
-const authorizationSearch = "Authorization: Bearer ";
-
 export class StreamImpersonator extends Transform {
+  static newlineBuffer = Buffer.from("\r\n");
+  static bodySeparatorBuffer = Buffer.from("\r\n\r\n");
+  static authorizationSearch = "Authorization: Bearer ";
+  static maxHeaderSize = 80 * 1024;
+
   public publicKey = "";
   public saToken = "";
   private httpHeadersEnded = false;
@@ -28,7 +29,11 @@ export class StreamImpersonator extends Transform {
 
     const headerBuffer = Buffer.concat(this.headerChunks);
 
-    if (headerBuffer.includes(bodySeparatorBuffer)) {
+    if (headerBuffer.byteLength > StreamImpersonator.maxHeaderSize) {
+      throw new Error("Too many header bytes seen; overflow detected");
+    }
+
+    if (headerBuffer.includes(StreamImpersonator.bodySeparatorBuffer)) {
       this.httpHeadersEnded = true;
     }
 
@@ -51,7 +56,7 @@ export class StreamImpersonator extends Transform {
   }
 
   parseTokenFromHttpHeaders(chunk: Buffer) {
-    const search = authorizationSearch;
+    const search = StreamImpersonator.authorizationSearch;
     const index = chunk.indexOf(search);
 
     if (index === -1) {
@@ -59,7 +64,7 @@ export class StreamImpersonator extends Transform {
     }
 
     const tokenBuffer = chunk.slice(index);
-    const newLineIndex = tokenBuffer.indexOf(newlineBuffer);
+    const newLineIndex = tokenBuffer.indexOf(StreamImpersonator.newlineBuffer);
 
     if (newLineIndex === -1) {
       return "";
@@ -73,11 +78,11 @@ export class StreamImpersonator extends Transform {
       const tokenData = jwt.verify(token, this.publicKey, {
         algorithms: ["RS256", "RS384", "RS512"]
       }) as TokenPayload;
-      const impersonatedHeaders: Buffer[] = [Buffer.from(this.saToken), newlineBuffer];
+      const impersonatedHeaders: Buffer[] = [Buffer.from(this.saToken), StreamImpersonator.newlineBuffer];
 
       impersonatedHeaders.push(Buffer.from(`Impersonate-User: ${tokenData.sub}`));
       tokenData?.roles?.forEach((role) => {
-        impersonatedHeaders.push(newlineBuffer);
+        impersonatedHeaders.push(StreamImpersonator.newlineBuffer);
         impersonatedHeaders.push(Buffer.from(`Impersonate-Group: ${role}`));
       });
 

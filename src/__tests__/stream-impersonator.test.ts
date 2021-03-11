@@ -69,13 +69,9 @@ MwIDAQAB
     }, jwtPrivateKey, { algorithm: "RS256" });
 
     stream.pipe(parser).pipe(destination);
-    stream.write("GET / HTTP/1.1\r\n");
-    stream.write("Accept: application/json\r\n");
-    stream.write("Content-Type: application/json\r\n");
-    stream.write(`Authorization: Bearer ${token}\r\n\r\n`);
-
+    stream.write(`GET / HTTP/1.1\r\nAccept: application/json\r\nContent-`);
+    stream.write(`Type: application/json\r\nAuthorization: Bearer ${token}\r\n\r\n`);
     expect(destination.buffer.toString()).toMatchSnapshot();
-
   });
 
   it("does not impersonate on invalid token", async () => {

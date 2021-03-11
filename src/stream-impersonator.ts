@@ -8,6 +8,10 @@ type TokenPayload = {
   roles: string[];
 };
 
+const newlineBuffer = Buffer.from("\r\n");
+const bodySeparatorBuffer = Buffer.from("\r\n\r\n");
+const authorizationSearch = "Authorization: Bearer ";
+
 export class StreamImpersonator extends Transform {
   public publicKey = "";
   public saToken = "";
@@ -20,29 +24,34 @@ export class StreamImpersonator extends Transform {
 
       return callback();
     }
-
     this.headerChunks.push(chunk);
 
-    if (chunk.includes("\r\n\r\n")) {
+    const headerBuffer = Buffer.concat(this.headerChunks);
+
+    if (headerBuffer.includes(bodySeparatorBuffer)) {
       this.httpHeadersEnded = true;
     }
 
     if (!this.httpHeadersEnded) {
       return callback(); // wait for more data
     }
+    this.headerChunks = [];
 
-    const headerBuffer = Buffer.concat(this.headerChunks);
     const jwtToken = this.parseTokenFromHttpHeaders(headerBuffer);
 
-    if (jwtToken !== "" && !this.writableEnded) {
-      this.push(this.impersonateJwtToken(headerBuffer, jwtToken));
+    if (!this.writableEnded) {
+      if (jwtToken !== "") {
+        this.push(this.impersonateJwtToken(headerBuffer, jwtToken));
+      } else {
+        this.push(headerBuffer);
+      }
     }
 
     return callback();
   }
 
   parseTokenFromHttpHeaders(chunk: Buffer) {
-    const search = "Authorization: Bearer ";
+    const search = authorizationSearch;
     const index = chunk.indexOf(search);
 
     if (index === -1) {
@@ -50,26 +59,26 @@ export class StreamImpersonator extends Transform {
     }
 
     const tokenBuffer = chunk.slice(index);
-    const newLineIndex = tokenBuffer.indexOf("\r\n");
+    const newLineIndex = tokenBuffer.indexOf(newlineBuffer);
 
     if (newLineIndex === -1) {
       return "";
     }
 
-    return tokenBuffer.slice(search.length, newLineIndex).toString("utf-8");
+    return tokenBuffer.slice(search.length, newLineIndex).toString();
   }
 
   impersonateJwtToken(chunk: Buffer, token: string) {
     try {
-      const tokenData = jwt.verify(token, this.publicKey) as TokenPayload;
-      const newlineBuffer = Buffer.from("\r\n", "utf-8");
-      const impersonatedHeaders: Buffer[] = [Buffer.from(this.saToken, "utf-8"), newlineBuffer];
+      const tokenData = jwt.verify(token, this.publicKey, {
+        algorithms: ["RS256", "RS384", "RS512"]
+      }) as TokenPayload;
+      const impersonatedHeaders: Buffer[] = [Buffer.from(this.saToken), newlineBuffer];
 
-      impersonatedHeaders.push(Buffer.from(`Impersonate-User: ${tokenData.sub}`, "utf-8"));
-
+      impersonatedHeaders.push(Buffer.from(`Impersonate-User: ${tokenData.sub}`));
       tokenData?.roles?.forEach((role) => {
         impersonatedHeaders.push(newlineBuffer);
-        impersonatedHeaders.push(Buffer.from(`Impersonate-Group: ${role}`, "utf-8"));
+        impersonatedHeaders.push(Buffer.from(`Impersonate-Group: ${role}`));
       });
 
       const index = chunk.indexOf(token);
@@ -80,7 +89,7 @@ export class StreamImpersonator extends Transform {
 
       return impersonatedChunk;
     } catch(err) {
-      console.error(err);
+      console.error("jwt parsing failed: ", String(err));
 
       return chunk;
     }

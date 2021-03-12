@@ -17,14 +17,16 @@ export class StreamImpersonator extends Transform {
   public publicKey = "";
   public saToken = "";
   private httpHeadersEnded = false;
+  private pipelining = false;
   private headerChunks: Buffer[] = [];
 
   _transform(chunk: Buffer, encoding: BufferEncoding, callback: TransformCallback): void {
-    if (this.httpHeadersEnded) {
+    if (this.httpHeadersEnded && !this.pipelining) {
       if (!this.writableEnded) this.push(chunk);
 
       return callback();
     }
+
     this.headerChunks.push(chunk);
 
     const headerBuffer = Buffer.concat(this.headerChunks);
@@ -37,16 +39,32 @@ export class StreamImpersonator extends Transform {
       this.httpHeadersEnded = true;
     }
 
-    if (!this.httpHeadersEnded) {
+    if (!this.httpHeadersEnded && !this.pipelining) {
       return callback(); // wait for more data
     }
-    this.headerChunks = [];
 
     const jwtToken = this.parseTokenFromHttpHeaders(headerBuffer);
 
     if (!this.writableEnded) {
       if (jwtToken !== "") {
-        this.push(this.impersonateJwtToken(headerBuffer, jwtToken));
+        this.headerChunks = [];
+        const modifiedBuffer = this.impersonateJwtToken(headerBuffer, jwtToken);
+
+
+
+        const protocolLine = headerBuffer.slice(0, headerBuffer.indexOf(StreamImpersonator.newlineBuffer));
+        const verb = protocolLine.toString().split(" ")[0];
+
+        if (verb === "GET" || verb === "HEAD" || verb === "OPTIONS") {
+          this.pipelining = true; // http request pipelining
+
+          const newlineIndex = modifiedBuffer.lastIndexOf(StreamImpersonator.newlineBuffer);
+
+          this.push(modifiedBuffer.slice(0, newlineIndex + 2));
+          this.headerChunks.push(modifiedBuffer.slice(newlineIndex + 2));
+        } else {
+          this.push(modifiedBuffer);
+        }
       } else {
         this.push(headerBuffer);
       }

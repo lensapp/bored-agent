@@ -121,6 +121,10 @@ export class AgentProxy {
         const decipher = createDecipheriv(this.cipherAlgorithm, key, iv);
         const cipher = createCipheriv(this.cipherAlgorithm, key, iv);
 
+        socket.on("end", () => {
+          //stream.end();
+        });
+
         if (this.serviceAccountToken && this.idpPublicKey !== "") {
           const streamImpersonator = new StreamImpersonator();
 

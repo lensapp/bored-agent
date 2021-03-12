@@ -19,6 +19,28 @@ Impersonate-User: johndoe
 "
 `;
 
+exports[`StreamImpersonator handles http request pipelining 1`] = `
+"GET / HTTP/1.1
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer service-account-token
+Impersonate-User: johndoe
+
+GET /version HTTP/1.1
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer service-account-token
+Impersonate-User: johndoe
+
+GET /foo HTTP/1.1
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer service-account-token
+Impersonate-User: johndoe
+
+"
+`;
+
 exports[`StreamImpersonator handles newline splitted to separate chunks 1`] = `
 "GET / HTTP/1.1
 Accept: application/json

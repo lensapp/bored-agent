@@ -1,10 +1,11 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`StreamImpersonator does not impersonate on invalid token 1`] = `
-"GET / HTTP/1.1
+"POST / HTTP/1.1
 Accept: application/json
 Authorization: Bearer invalid.token.is
 Content-Type: application/json
+Content-Length: 11
 
 hello world"
 `;
@@ -20,7 +21,14 @@ Impersonate-User: johndoe
 `;
 
 exports[`StreamImpersonator handles http request pipelining 1`] = `
-"GET / HTTP/1.1
+"POST /foo HTTP/1.1
+Accept: application/json
+Content-Type: application/json
+Content-Length: 3
+Authorization: Bearer service-account-token
+Impersonate-User: johndoe
+
+barGET / HTTP/1.1
 Accept: application/json
 Content-Type: application/json
 Authorization: Bearer service-account-token
@@ -32,7 +40,13 @@ Content-Type: application/json
 Authorization: Bearer service-account-token
 Impersonate-User: johndoe
 
-GET /foo HTTP/1.1
+POST /foo HTTP/1.1
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer service-account-token
+Impersonate-User: johndoe
+
+barGET /foo HTTP/1.1
 Accept: application/json
 Content-Type: application/json
 Authorization: Bearer service-account-token
@@ -49,6 +63,17 @@ Authorization: Bearer service-account-token
 Impersonate-User: johndoe
 
 "
+`;
+
+exports[`StreamImpersonator handles non GET requests 1`] = `
+"POST /apis/authorization.k8s.io/v1/selfsubjectaccessreviews HTTP/1.1
+Accept: application/json
+Content-Type: application/json
+Content-Length: 324
+Authorization: Bearer service-account-token
+Impersonate-User: johndoe
+
+{\\"apiVersion\\":\\"authorization.k8s.io/v1\\",\\"kind\\":\\"SelfSubjectAccessReview\\",\\"spec\\":{\\"resourceAttributes\\":{\\"namespace\\":\\"kube-system\\",\\"resource\\":\\"*\\",\\"verb\\":\\"create\\"}}}{\\"apiVersion\\":\\"authorization.k8s.io/v1\\",\\"kind\\":\\"SelfSubjectAccessReview\\",\\"spec\\":{\\"resourceAttributes\\":{\\"namespace\\":\\"kube-system\\",\\"resource\\":\\"*\\",\\"verb\\":\\"create\\"}}}"
 `;
 
 exports[`StreamImpersonator impersonates groups on valid jwt token 1`] = `

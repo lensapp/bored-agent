@@ -13,16 +13,25 @@ export class StreamImpersonator extends Transform {
   static bodySeparatorBuffer = Buffer.from("\r\n\r\n");
   static authorizationSearch = "Authorization: Bearer ";
   static maxHeaderSize = 80 * 1024;
+  static verbs = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"];
 
   public publicKey = "";
   public saToken = "";
   private httpHeadersEnded = false;
-  private pipelining = false;
   private headerChunks: Buffer[] = [];
+  private httpHeadersStarted = false;
 
   _transform(chunk: Buffer, encoding: BufferEncoding, callback: TransformCallback): void {
-    if (this.httpHeadersEnded && !this.pipelining) {
-      if (!this.writableEnded) this.push(chunk);
+    if (!this.httpHeadersStarted && StreamImpersonator.verbs.includes(chunk.slice(0, chunk.indexOf(" ")).toString())) {
+      this.httpHeadersStarted = true;
+      this.httpHeadersEnded = false;
+    }
+
+    if (this.httpHeadersEnded) {
+      if (!this.writableEnded) {
+        this.push(Buffer.concat(this.headerChunks));
+        this.push(chunk);
+      }
 
       return callback();
     }
@@ -31,17 +40,16 @@ export class StreamImpersonator extends Transform {
 
     const headerBuffer = Buffer.concat(this.headerChunks);
 
-    if (headerBuffer.byteLength > StreamImpersonator.maxHeaderSize) {
+    if (this.httpHeadersStarted && headerBuffer.byteLength > StreamImpersonator.maxHeaderSize) {
       throw new Error("Too many header bytes seen; overflow detected");
     }
 
-    if (headerBuffer.includes(StreamImpersonator.bodySeparatorBuffer)) {
-      this.httpHeadersEnded = true;
+    if (this.httpHeadersStarted && headerBuffer.indexOf(StreamImpersonator.bodySeparatorBuffer) === -1) {
+      return callback();
     }
 
-    if (!this.httpHeadersEnded && !this.pipelining) {
-      return callback(); // wait for more data
-    }
+    this.httpHeadersEnded = true;
+    this.httpHeadersStarted = false;
 
     const jwtToken = this.parseTokenFromHttpHeaders(headerBuffer);
 
@@ -49,24 +57,12 @@ export class StreamImpersonator extends Transform {
       if (jwtToken !== "") {
         this.headerChunks = [];
         const modifiedBuffer = this.impersonateJwtToken(headerBuffer, jwtToken);
+        const newlineIndex = modifiedBuffer.lastIndexOf(StreamImpersonator.newlineBuffer);
 
-
-
-        const protocolLine = headerBuffer.slice(0, headerBuffer.indexOf(StreamImpersonator.newlineBuffer));
-        const verb = protocolLine.toString().split(" ")[0];
-
-        if (verb === "GET" || verb === "HEAD" || verb === "OPTIONS") {
-          this.pipelining = true; // http request pipelining
-
-          const newlineIndex = modifiedBuffer.lastIndexOf(StreamImpersonator.newlineBuffer);
-
-          this.push(modifiedBuffer.slice(0, newlineIndex + 2));
-          this.headerChunks.push(modifiedBuffer.slice(newlineIndex + 2));
-        } else {
-          this.push(modifiedBuffer);
-        }
+        this.push(modifiedBuffer.slice(0, newlineIndex + 4));
+        this.headerChunks.push(modifiedBuffer.slice(newlineIndex + 4));
       } else {
-        this.push(headerBuffer);
+        this.push(chunk);
       }
     }
 

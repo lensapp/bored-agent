@@ -127,8 +127,13 @@ MwIDAQAB
     }, jwtPrivateKey, { algorithm: "RS256" });
 
     stream.pipe(parser).pipe(destination);
-    stream.write(`GET / HTTP/1.1\r\nAccept: application/json\r\nContent-Type: application/json\r\nAuthorization: Bearer ${token}\r\n\r\n`);
+    stream.write(`POST /foo HTTP/1.1\r\nAccept: application/json\r\nContent-Type: application/json\r\nContent-Length: 3\r\nAuthorization: Bearer ${token}\r\n\r\nbar`);
+    stream.write(`GET / HTTP/1.1\r\nAcce`);
+    stream.write(`pt: application/json\r\nContent-T`);
+    stream.write(`ype: application/json\r\nAuthorization: Bearer ${token}\r`);
+    stream.write(`\n\r\n`);
     stream.write(`GET /version HTTP/1.1\r\nAccept: application/json\r\nContent-Type: application/json\r\nAuthorization: Bearer ${token}\r\n\r\n`);
+    stream.write(`POST /foo HTTP/1.1\r\nAccept: application/json\r\nContent-Type: application/json\r\nAuthorization: Bearer ${token}\r\n\r\nbar`);
     stream.write(`GET /foo HTTP/1.1\r\nAccept: application/json\r\nContent-Type: application/json\r\nAuthorization: Bearer ${token}\r\n\r\n`);
     expect(destination.buffer.toString()).toMatchSnapshot();
   });
@@ -154,6 +159,28 @@ MwIDAQAB
     expect(destination.buffer.toString()).toMatchSnapshot();
   });
 
+
+  it ("handles non GET requests", async () => {
+    const stream = new PassThrough();
+    const parser = new StreamImpersonator();
+    const destination = new DummyWritable();
+
+    parser.saToken = "service-account-token";
+    parser.publicKey = jwtPublicKey;
+
+    const token = jwt.sign({
+      exp: Math.floor(Date.now() / 1000) + (60 * 60),
+      sub: "johndoe"
+    }, jwtPrivateKey, { algorithm: "RS256" });
+
+    stream.pipe(parser).pipe(destination);
+    stream.write(`POST /apis/authorization.k8s.io/v1/selfsubjectaccessreviews HTTP/1.1\r\nAccept: application/json\r\nContent-Type:`);
+    stream.write(` application/json\r\nContent-Length: 324\r\nAuthorization: Bearer ${token}\r\n\r`);
+    stream.write(`\n{"apiVersion":"authorization.k8s.io/v1","kind":"SelfSubjectAccess`);
+    stream.write(`Review","spec":{"resourceAttributes":{"namespace":"kube-system","resource":"*","verb":"create"}}}{"apiVersion":"authorization.k8s.io/v1","kind":"SelfSubjectAccessReview","spec":{"resourceAttributes":{"namespace":"kube-system","resource":"*","verb":"create"}}}`);
+    expect(destination.buffer.toString()).toMatchSnapshot();
+  });
+
   it("does not impersonate on invalid token", async () => {
     const stream = new PassThrough();
     const parser = new StreamImpersonator();
@@ -163,10 +190,10 @@ MwIDAQAB
     parser.publicKey = jwtPublicKey;
 
     stream.pipe(parser).pipe(destination);
-    stream.write("GET / HTTP/1.1\r\n");
+    stream.write("POST / HTTP/1.1\r\n");
     stream.write("Accept: application/json\r\n");
     stream.write(`Authorization: Bearer invalid.token.is\r\n`);
-    stream.write("Content-Type: application/json\r\n\r\n");
+    stream.write("Content-Type: application/json\r\nContent-Length: 11\r\n\r\n");
     stream.write("hello world");
 
     expect(destination.buffer.toString()).toMatchSnapshot();

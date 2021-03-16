@@ -11,7 +11,9 @@ describe("StreamParser", () => {
     const keys = await keyPairManager.generateKeys();
     const secretKey = randomBytes(32);
     const iv = randomBytes(16);
-    const header = `BoreD-Enc-Key: ${publicEncrypt(keys.public, secretKey).toString("base64")}-${iv.toString("base64")}\r\n`;
+    const encryptedSecret = publicEncrypt(keys.public, secretKey).toString("base64");
+    const encryptedIv = publicEncrypt(keys.public, iv).toString("base64");
+    const header = `BoreD-Enc-Key: ${encryptedSecret}-${encryptedIv}\r\n\r\n`;
 
     parser.privateKey = keys.private;
     let parsedKey = "";

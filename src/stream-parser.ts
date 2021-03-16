@@ -7,6 +7,7 @@ export class StreamParser extends Transform {
 
   private envelopeHeaderSeen = false;
   private readonly headerPrefix = "BoreD-Enc-Key: ";
+  private readonly separator = "\r\n\r\n";
 
   _transform(chunk: Buffer, encoding: BufferEncoding, callback: TransformCallback): void {
     if (!this.privateKey) {
@@ -21,7 +22,7 @@ export class StreamParser extends Transform {
 
     const header = chunk.toString();
 
-    if (!header.startsWith(this.headerPrefix) || !header.includes("\r\n")) {
+    if (!header.startsWith(this.headerPrefix) || !header.includes(this.separator)) {
       // header info is incomplete wait for more data
       return callback();
     }
@@ -31,7 +32,7 @@ export class StreamParser extends Transform {
     try {
       const decryptedHeader = this.decryptHeader(header);
 
-      this.bodyParser?.(decryptedHeader.key, Buffer.from(decryptedHeader.iv, "base64"));
+      this.bodyParser?.(decryptedHeader.key, decryptedHeader.iv);
 
       return callback();
     } catch(error) {
@@ -40,10 +41,11 @@ export class StreamParser extends Transform {
   }
 
   decryptHeader(header: string) {
-    const encryptedKeys = header.split(this.headerPrefix)[1].split("\r\n")[0].split("-");
+    const encryptedKeys = header.split(this.headerPrefix)[1].split(this.separator)[0].split("-");
     const encryptedKey = encryptedKeys[0];
-    const iv = encryptedKeys[1];
+    const encryptedIv = encryptedKeys[1];
     const key = privateDecrypt(this.privateKey, Buffer.from(encryptedKey, "base64"));
+    const iv = privateDecrypt(this.privateKey, Buffer.from(encryptedIv, "base64"));
 
     return {
       key,

@@ -39,7 +39,7 @@ describe("StreamParser", () => {
     parser.privateKey = keys.private;
     let parsed = false;
 
-    parser.bodyParser = (key) => {
+    parser.bodyParser = () => {
       parsed = true;
     };
 

@@ -1,5 +1,6 @@
 import { Transform, TransformCallback } from "stream";
 import * as jwt from "jsonwebtoken";
+import logger from "./logger";
 
 type TokenPayload = {
   exp: number;
@@ -94,6 +95,7 @@ export class StreamImpersonator extends Transform {
       }) as TokenPayload;
       const impersonatedHeaders: Buffer[] = [Buffer.from(this.saToken), StreamImpersonator.newlineBuffer];
 
+      logger.info(`[IMPERSONATOR] impersonating user ${tokenData.sub}`);
       impersonatedHeaders.push(Buffer.from(`Impersonate-User: ${tokenData.sub}`));
       tokenData?.groups?.forEach((group) => {
         impersonatedHeaders.push(StreamImpersonator.newlineBuffer);
@@ -108,7 +110,7 @@ export class StreamImpersonator extends Transform {
 
       return impersonatedChunk;
     } catch(err) {
-      console.error("jwt parsing failed: ", String(err));
+      logger.error("[IMPERSONATOR] jwt parsing failed: ", String(err));
 
       return chunk;
     }

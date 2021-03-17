@@ -11,7 +11,9 @@ describe("StreamParser", () => {
     const keys = await keyPairManager.generateKeys();
     const secretKey = randomBytes(32);
     const iv = randomBytes(16);
-    const header = `BoreD-Enc-Key: ${publicEncrypt(keys.public, secretKey).toString("base64")}-${iv.toString("base64")}\r\n`;
+    const encryptedSecretKey = publicEncrypt(keys.public, secretKey).toString("base64");
+    const encryptedIv = publicEncrypt(keys.public, iv).toString("base64");
+    const header = `BoreD-Enc-Key: ${encryptedSecretKey}-${encryptedIv}\r\n\r\n`;
 
     parser.privateKey = keys.private;
     let parsedKey = "";
@@ -24,5 +26,28 @@ describe("StreamParser", () => {
     stream.write(header);
 
     expect(parsedKey).toBe(secretKey.toString());
+  });
+
+  it ("ignores invalid header value", async () => {
+    const keyPairManager = new KeyPairManager("default");
+    const stream = new PassThrough();
+    const parser = new StreamParser();
+    const keys = await keyPairManager.generateKeys();
+
+    const header = `BoreD-Enc-Key: foo-bar\r\n\r\n`;
+
+    parser.privateKey = keys.private;
+    let parsedKey = "";
+
+    parser.bodyParser = (key) => {
+      parsedKey = key.toString();
+    };
+
+    stream.pipe(parser);
+    expect(() => {
+      stream.write(header);
+    }).toThrowError();
+
+    expect(parsedKey).toBe("");
   });
 });

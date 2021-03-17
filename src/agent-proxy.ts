@@ -7,6 +7,7 @@ import { createDecipheriv, createCipheriv } from "crypto";
 import { KeyPair } from "./keypair-manager";
 import { StreamParser } from "./stream-parser";
 import { StreamImpersonator } from "./stream-impersonator";
+import logger from "./logger";
 
 export type AgentProxyOptions = {
   boredServer: string;
@@ -49,7 +50,7 @@ export class AgentProxy {
   }
 
   connect(reconnect = false) {
-    if (!reconnect) console.log(`PROXY: establishing reverse tunnel to ${this.boredServer} ...`);
+    if (!reconnect) logger.info(`[PROXY] establishing reverse tunnel to ${this.boredServer} ...`);
 
     this.ws = new WebSocket(`${this.boredServer}/agent/connect`, {
       headers: {
@@ -60,13 +61,13 @@ export class AgentProxy {
     this.ws.on("open", () => {
       if (!this.ws) return;
 
-      console.log("PROXY: tunnel connection opened");
+      logger.info("[PROXY] tunnel connection opened");
       this.yamuxServer = new Server(this.handleRequestStream.bind(this), {
         enableKeepAlive: false
       });
 
       this.yamuxServer.on("error", (error) => {
-        console.error("YAMUX: server error", error);
+        logger.error("[YAMUX] server error", error);
       });
 
       const wsDuplex = WebSocket.createWebSocketStream(this.ws);
@@ -82,14 +83,14 @@ export class AgentProxy {
     };
 
     this.ws.on("error", (err) => {
-      console.error("PROXY: websocket error", err);
+      logger.error("[PROXY] websocket error", err);
       retry();
     });
     this.ws.on("unexpected-response", () => {
       retry();
     });
     this.ws.on("close", (code: number) => {
-      console.log(`PROXY: tunnel connection closed (code: ${code})`);
+      logger.info(`[PROXY] tunnel connection closed (code: ${code})`);
       retry();
     });
   }
@@ -122,7 +123,7 @@ export class AgentProxy {
         const cipher = createCipheriv(this.cipherAlgorithm, key, iv);
 
         socket.on("end", () => {
-          //stream.end();
+          logger.info("socket closed");
         });
 
         if (this.serviceAccountToken && this.idpPublicKey !== "") {
@@ -138,7 +139,12 @@ export class AgentProxy {
 
       parser.privateKey = this.keys?.private || "";
 
-      stream.pipe(parser);
+      try {
+        stream.pipe(parser);
+      } catch (error) {
+        logger.error("[STREAM PARSER] failed to parse stream", error);
+        stream.end();
+      }
     });
 
     socket.on("end", () => {
@@ -150,7 +156,7 @@ export class AgentProxy {
     });
 
     stream.on("end", () => {
-      console.log("request ended");
+      logger.info("[PROXY] request ended");
       socket.end();
     });
   }

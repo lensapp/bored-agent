@@ -2,7 +2,7 @@ import { Transform, TransformCallback } from "stream";
 import { privateDecrypt } from "crypto";
 
 export class StreamParser extends Transform {
-  static SEPARATOR = "\r\n";
+  static SEPARATOR = "\r\n\r\n";
 
   public privateKey = "";
   public bodyParser?: (key: Buffer, iv: Buffer) => void;

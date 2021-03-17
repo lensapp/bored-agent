@@ -44,11 +44,14 @@ describe("StreamParser", () => {
     };
 
     stream.pipe(parser);
-    expect(() => {
-      stream.cork();
+    stream.cork();
+    expect(async () => {
       stream.write(header);
-      stream.uncork();
-    }).toThrow("decoding error");
+
+      await new Promise((resolve) => {
+        parser.on("data", resolve);
+      });
+    }).rejects.toThrow("decoding error");
 
     expect(parsed).toBeFalsy();
   });

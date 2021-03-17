@@ -37,17 +37,19 @@ describe("StreamParser", () => {
     const header = `BoreD-Enc-Key: foo-bar\r\n\r\n`;
 
     parser.privateKey = keys.private;
-    let parsedKey = "";
+    let parsed = false;
 
     parser.bodyParser = (key) => {
-      parsedKey = key.toString();
+      parsed = true;
     };
 
     stream.pipe(parser);
     expect(() => {
+      stream.cork();
       stream.write(header);
-    }).toThrowError();
+      stream.uncork();
+    }).toThrow("decoding error");
 
-    expect(parsedKey).toBe("");
+    expect(parsed).toBeFalsy();
   });
 });

@@ -1,5 +1,5 @@
-import { KubeConfig, CoreV1Api, V1Secret, PatchUtils } from "@kubernetes/client-node";
 import { generateKeyPair } from "crypto";
+import { K8sClient } from "./k8s-client";
 
 export type KeyPair = {
   private: string;
@@ -8,35 +8,43 @@ export type KeyPair = {
 
 const certSecretName = process.env.CERT_SECRET || "bored-agent-cert";
 
+export type Secret = {
+  kind: string,
+  apiVersion: string,
+  metadata: {
+    namespace: string,
+    name: string
+  },
+  data: {
+    private?: string,
+    public?: string
+  }
+};
+
 export class KeyPairManager {
-  private kubeConfig: KubeConfig;
   private namespace: string;
-  private apiClient: CoreV1Api;
+  private apiClient: K8sClient;
 
   constructor(namespace: string) {
     this.namespace = namespace;
-    this.kubeConfig = new KubeConfig();
-    this.kubeConfig.loadFromCluster();
-    this.apiClient = this.kubeConfig.makeApiClient(CoreV1Api);
+    this.apiClient = new K8sClient();
   }
 
   protected async fetchExistingKeys(): Promise<KeyPair> {
-    let secret: {
-      body: V1Secret;
-    };
+    let secret: Secret;
 
     try {
-      secret = await this.apiClient.readNamespacedSecret(certSecretName, this.namespace);
+      secret = await this.apiClient.get<Secret>(`/api/v1/namespaces/${this.namespace}/secrets/${certSecretName}`);
     } catch(err) {
-      throw new Error("failed to read cert secret");
+      throw new Error(`failed to read cert secret: ${err}`);
     }
 
     if (!secret) {
       throw new Error(`cannot find secret: ${certSecretName}`);
     }
 
-    const privateKey = secret.body.data?.["private"] || "";
-    const publicKey = secret.body.data?.["public"] || "";
+    const privateKey = secret.data?.["private"] || "";
+    const publicKey = secret.data?.["public"] || "";
 
     return {
       private: privateKey,
@@ -56,8 +64,8 @@ export class KeyPairManager {
       }
     ];
 
-    return this.apiClient.patchNamespacedSecret(certSecretName, this.namespace, patch, undefined, undefined, undefined, undefined, {
-      "headers": { "Content-type": PatchUtils.PATCH_FORMAT_JSON_PATCH }
+    return this.apiClient.patch(`/api/v1/namespaces/${this.namespace}/secrets/${certSecretName}`, patch, {
+      "Content-Type": "application/json-patch+json"
     });
   }
 

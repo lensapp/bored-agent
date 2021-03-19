@@ -99,6 +99,7 @@ export class AgentProxy {
     const opts: tls.ConnectionOptions = {
       host: process.env.KUBERNETES_HOST || "kubernetes.default.svc",
       port: parseInt(process.env.KUBERNETES_SERVICE_PORT || "443"),
+      timeout: 5_000
     };
 
     if (this.caCert) {
@@ -122,10 +123,6 @@ export class AgentProxy {
         const decipher = createDecipheriv(this.cipherAlgorithm, key, iv);
         const cipher = createCipheriv(this.cipherAlgorithm, key, iv);
 
-        socket.on("end", () => {
-          logger.info("socket closed");
-        });
-
         if (this.serviceAccountToken && this.idpPublicKey !== "") {
           const streamImpersonator = new StreamImpersonator();
 
@@ -142,9 +139,13 @@ export class AgentProxy {
       try {
         stream.pipe(parser);
       } catch (error) {
-        logger.error("[STREAM PARSER] failed to parse stream", error);
+        logger.error("[STREAM PARSER] failed to parse stream %s", error);
         stream.end();
       }
+    });
+
+    socket.on("timeout", () => {
+      socket.end();
     });
 
     socket.on("end", () => {

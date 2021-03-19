@@ -1,5 +1,5 @@
 import got, { Headers } from "got";
-import * as fs from "fs";
+import * as fs from "fs/promises";
 
 export const kubernetesHost = process.env.KUBERNETES_HOST || "kubernetes.default.svc";
 export const caCert = process.env.CA_CERT || "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt";
@@ -22,13 +22,14 @@ export class K8sError extends Error {
 }
 
 export class K8sClient {
-  private serviceAccountToken: string;
-  private caCert: string;
-  private headers: Headers;
+  private serviceAccountToken = "";
+  private caCert = "";
+  private headers: Headers = {};
 
-  constructor() {
-    this.serviceAccountToken = fs.readFileSync(serviceAccountTokenPath).toString();
-    this.caCert = fs.readFileSync(caCert).toString();
+  async init() {
+    this.serviceAccountToken = (await fs.readFile(serviceAccountTokenPath)).toString();
+    this.caCert = (await fs.readFile(caCert)).toString();
+
     this.headers = {
       "Authorization": `Bearer ${this.serviceAccountToken}`,
       "Accept": "application/json"
@@ -38,8 +39,8 @@ export class K8sClient {
   async get<T>(path: string, headers = {}): Promise<T> {
     const response = await got.get(`https://${kubernetesHost}${path}`, {
       headers: {
+        ...headers,
         ...this.headers,
-        ...headers
       },
       https: {
         certificateAuthority: this.caCert

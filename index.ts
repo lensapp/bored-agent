@@ -34,10 +34,9 @@ keyPairManager.ensureKeys().then((keys) => {
   proxy.init(keys);
   proxy.connect();
 }).catch((reason) => {
-  logger.error("[MAIN] failed to create certificates", reason);
+  logger.error("[MAIN] failed to create certificates %s", reason);
   process.exit(1);
 });
-
 
 process.once("SIGTERM", () => {
   proxy.disconnect();

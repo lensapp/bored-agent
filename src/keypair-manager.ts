@@ -70,6 +70,7 @@ export class KeyPairManager {
   }
 
   async ensureKeys(): Promise<KeyPair> {
+    await this.apiClient.init();
     const existingKeys = await this.fetchExistingKeys();
 
     if (existingKeys.private !== "" && existingKeys.public !== "") {

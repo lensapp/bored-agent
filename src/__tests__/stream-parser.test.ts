@@ -5,7 +5,7 @@ import { publicEncrypt, randomBytes } from "crypto";
 
 describe("StreamParser", () => {
   it ("parses bored header", async () => {
-    const keyPairManager = new KeyPairManager("default");
+    const keyPairManager = new KeyPairManager("default", {} as any);
     const stream = new PassThrough();
     const parser = new StreamParser();
     const keys = await keyPairManager.generateKeys();
@@ -29,7 +29,7 @@ describe("StreamParser", () => {
   });
 
   it ("ignores invalid header value", async () => {
-    const keyPairManager = new KeyPairManager("default");
+    const keyPairManager = new KeyPairManager("default", {} as any);
     const stream = new PassThrough();
     const parser = new StreamParser();
     const keys = await keyPairManager.generateKeys();

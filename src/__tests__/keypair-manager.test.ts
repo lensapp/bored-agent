@@ -3,7 +3,7 @@ import { KeyPairManager } from "../keypair-manager";
 describe("KeyPairManager", () => {
   describe("generateKeys", () => {
     it("generates keys", async () => {
-      const manager = new KeyPairManager("default");
+      const manager = new KeyPairManager("default", {} as any);
 
       const keys = await manager.generateKeys();
 

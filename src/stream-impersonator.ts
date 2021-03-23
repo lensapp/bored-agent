@@ -110,7 +110,7 @@ export class StreamImpersonator extends Transform {
 
       return impersonatedChunk;
     } catch(err) {
-      logger.error("[IMPERSONATOR] jwt parsing failed: ", String(err));
+      logger.error("[IMPERSONATOR] jwt parsing failed: %s", String(err));
 
       return chunk;
     }

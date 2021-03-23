@@ -26,11 +26,11 @@
     "typescript": "^4.1.5"
   },
   "dependencies": {
+    "bored-mplex": "^0.0.13",
     "got": "^11.8.2",
     "jsonwebtoken": "^8.5.1",
     "pino": "^6.11.2",
     "pino-pretty": "^4.7.1",
-    "ws": "^7.4.3",
-    "yamux-js": "^0.0.2"
+    "ws": "^7.4.3"
   }
 }

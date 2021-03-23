@@ -1,6 +1,4 @@
 import WebSocket from "ws";
-import { Server } from "yamux-js";
-import type { Duplex } from "stream";
 import * as tls from "tls";
 import * as fs from "fs";
 import { createDecipheriv, createCipheriv } from "crypto";
@@ -8,6 +6,7 @@ import { KeyPair } from "./keypair-manager";
 import { StreamParser } from "./stream-parser";
 import { StreamImpersonator } from "./stream-impersonator";
 import logger from "./logger";
+import { BoredMplex, Stream } from "bored-mplex";
 
 export type AgentProxyOptions = {
   boredServer: string;
@@ -23,13 +22,17 @@ export class AgentProxy {
   private boredToken: string;
   private idpPublicKey: string;
   private cipherAlgorithm = "aes-256-gcm";
-  private yamuxServer?: Server;
+  private mplex?: BoredMplex;
   private ws?: WebSocket;
   private caCert?: Buffer;
   private tlsSession?: Buffer;
   private keys?: KeyPair;
   private retryTimeout?: NodeJS.Timeout;
   private serviceAccountToken?: Buffer;
+
+  private counters = {
+    sockets: 0
+  };
 
   constructor(opts: AgentProxyOptions) {
     this.boredServer = opts.boredServer;
@@ -47,6 +50,10 @@ export class AgentProxy {
 
   init(keys: KeyPair) {
     this.keys = keys;
+
+    setInterval(() => {
+      logger.info(`[PROXY] ${this.counters.sockets} active sockets`);
+    }, 10_000);
   }
 
   connect(reconnect = false) {
@@ -62,17 +69,12 @@ export class AgentProxy {
       if (!this.ws) return;
 
       logger.info("[PROXY] tunnel connection opened");
-      this.yamuxServer = new Server(this.handleRequestStream.bind(this), {
-        enableKeepAlive: false
-      });
 
-      this.yamuxServer.on("error", (error) => {
-        logger.error("[YAMUX] server error", error);
-      });
+      this.mplex = new BoredMplex(this.handleRequestStream.bind(this));
 
       const wsDuplex = WebSocket.createWebSocketStream(this.ws);
 
-      this.yamuxServer.pipe(wsDuplex).pipe(this.yamuxServer);
+      this.mplex.pipe(wsDuplex).pipe(this.mplex);
     });
 
     const retry = () => {
@@ -95,11 +97,11 @@ export class AgentProxy {
     });
   }
 
-  handleRequestStream(stream: Duplex) {
+  handleRequestStream(stream: Stream) {
+    console.log("STREAM OPENED", stream.id);
     const opts: tls.ConnectionOptions = {
       host: process.env.KUBERNETES_HOST || "kubernetes.default.svc",
-      port: parseInt(process.env.KUBERNETES_SERVICE_PORT || "443"),
-      timeout: 5_000
+      port: parseInt(process.env.KUBERNETES_SERVICE_PORT || "443")
     };
 
     if (this.caCert) {
@@ -117,6 +119,7 @@ export class AgentProxy {
     }
 
     const socket = tls.connect(opts, () => {
+      this.counters.sockets += 1;
       const parser = new StreamParser();
 
       parser.bodyParser = (key: Buffer, iv: Buffer) => {
@@ -149,6 +152,7 @@ export class AgentProxy {
     });
 
     socket.on("end", () => {
+      this.counters.sockets -= 1;
       stream.end();
     });
 
@@ -156,7 +160,7 @@ export class AgentProxy {
       this.tlsSession = session;
     });
 
-    stream.on("end", () => {
+    stream.on("finish", () => {
       logger.info("[PROXY] request ended");
       socket.end();
     });

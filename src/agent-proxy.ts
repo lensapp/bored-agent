@@ -98,7 +98,6 @@ export class AgentProxy {
   }
 
   handleRequestStream(stream: Stream) {
-    console.log("STREAM OPENED", stream.id);
     const opts: tls.ConnectionOptions = {
       host: process.env.KUBERNETES_HOST || "kubernetes.default.svc",
       port: parseInt(process.env.KUBERNETES_SERVICE_PORT || "443")

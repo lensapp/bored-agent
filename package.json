@@ -26,7 +26,7 @@
     "typescript": "^4.1.5"
   },
   "dependencies": {
-    "bored-mplex": "^0.0.13",
+    "bored-mplex": "^0.0.14",
     "got": "^11.8.2",
     "jsonwebtoken": "^8.5.1",
     "pino": "^6.11.2",

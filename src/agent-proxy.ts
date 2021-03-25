@@ -71,6 +71,7 @@ export class AgentProxy {
       logger.info("[PROXY] tunnel connection opened");
 
       this.mplex = new BoredMplex(this.handleRequestStream.bind(this));
+      this.mplex.enableKeepAlive(15_000);
 
       const wsDuplex = WebSocket.createWebSocketStream(this.ws);
 

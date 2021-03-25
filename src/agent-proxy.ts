@@ -160,11 +160,7 @@ export class AgentProxy {
     });
 
     socket.on("end", () => {
-      const index = this.tlsSockets.findIndex((tlsSocket) => tlsSocket === socket);
-
-      if (index !== -1) {
-        this.tlsSockets.splice(index, 1);
-      }
+      this.tlsSockets = this.tlsSockets.filter((tlsSocket) => tlsSocket !== socket);
       stream.end();
     });
 

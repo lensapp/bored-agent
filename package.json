@@ -29,6 +29,7 @@
     "bored-mplex": "^0.0.15",
     "got": "^11.8.2",
     "jsonwebtoken": "^8.5.1",
+    "jwks-rsa": "^2.0.2",
     "pino": "^6.11.2",
     "pino-pretty": "^4.7.1",
     "ws": "^7.4.3"

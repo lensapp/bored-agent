@@ -29,10 +29,7 @@ export class AgentProxy {
   private keys?: KeyPair;
   private retryTimeout?: NodeJS.Timeout;
   private serviceAccountToken?: Buffer;
-
-  private counters = {
-    sockets: 0
-  };
+  private tlsSockets: tls.TLSSocket[] = [];
 
   constructor(opts: AgentProxyOptions) {
     this.boredServer = opts.boredServer;
@@ -52,7 +49,7 @@ export class AgentProxy {
     this.keys = keys;
 
     setInterval(() => {
-      logger.info(`[PROXY] ${this.counters.sockets} active sockets`);
+      logger.info(`[PROXY] ${this.tlsSockets.length} active sockets`);
     }, 10_000);
   }
 
@@ -94,14 +91,26 @@ export class AgentProxy {
     });
     this.ws.on("close", (code: number) => {
       logger.info(`[PROXY] tunnel connection closed (code: ${code})`);
+      this.closeTlsSockets();
       retry();
+    });
+  }
+
+  protected closeTlsSockets() {
+    this.tlsSockets.forEach((socket) => {
+      try {
+        socket.end();
+      } catch (error) {
+        logger.error(`[PROXY] failed to close socket: %s`, error);
+      }
     });
   }
 
   handleRequestStream(stream: Stream) {
     const opts: tls.ConnectionOptions = {
       host: process.env.KUBERNETES_HOST || "kubernetes.default.svc",
-      port: parseInt(process.env.KUBERNETES_SERVICE_PORT || "443")
+      port: parseInt(process.env.KUBERNETES_SERVICE_PORT || "443"),
+      timeout: 1_000 * 60 * 30 // 30 minutes
     };
 
     if (this.caCert) {
@@ -119,7 +128,7 @@ export class AgentProxy {
     }
 
     const socket = tls.connect(opts, () => {
-      this.counters.sockets += 1;
+      this.tlsSockets.push(socket);
       const parser = new StreamParser();
 
       parser.bodyParser = (key: Buffer, iv: Buffer) => {
@@ -152,7 +161,7 @@ export class AgentProxy {
     });
 
     socket.on("end", () => {
-      this.counters.sockets -= 1;
+      this.tlsSockets = this.tlsSockets.filter((tlsSocket) => tlsSocket !== socket);
       stream.end();
     });
 

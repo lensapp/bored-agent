@@ -1,6 +1,9 @@
 import { Transform, TransformCallback } from "stream";
 import * as jwt from "jsonwebtoken";
 import logger from "./logger";
+import jwksRSA from "jwks-rsa";
+
+const jwksUri = process.env.IDP_PUBLIC_KEY_JWKS_URL ?? "http://localhost/api/.well-known/jwks.json";
 
 type TokenPayload = {
   exp: number;
@@ -16,7 +19,6 @@ export class StreamImpersonator extends Transform {
   static maxHeaderSize = 80 * 1024;
   static verbs = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"];
 
-  public publicKey = "";
   public saToken = "";
   private httpHeadersEnded = false;
   private headerChunks: Buffer[] = [];
@@ -90,9 +92,29 @@ export class StreamImpersonator extends Transform {
 
   impersonateJwtToken(chunk: Buffer, token: string) {
     try {
-      const tokenData = jwt.verify(token, this.publicKey, {
-        algorithms: ["RS256", "RS384", "RS512"]
-      }) as TokenPayload;
+      const tokenData = jwt.verify(
+        token,
+        // fetch public key from jwks url
+        ({ kid }, cb) => {
+          jwksRSA({ cache: true, jwksUri })
+            .getSigningKey(kid, (error, key) => {
+              if (error) {
+                throw error;
+              }
+              else {
+              // see https://github.com/auth0/node-jwks-rsa/issues/103
+                const signingKey = key.getPublicKey();
+
+                cb(null, signingKey);
+              }
+            });
+        },
+        // options
+        {
+          algorithms: ["RS256", "RS384", "RS512"],
+          audience: []
+        }
+      )as unknown as TokenPayload;
       const impersonatedHeaders: Buffer[] = [Buffer.from(this.saToken), StreamImpersonator.newlineBuffer];
 
       logger.info(`[IMPERSONATOR] impersonating user ${tokenData.sub}`);

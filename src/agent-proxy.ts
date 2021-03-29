@@ -7,6 +7,7 @@ import { StreamParser } from "./stream-parser";
 import { StreamImpersonator } from "./stream-impersonator";
 import logger from "./logger";
 import { BoredMplex, Stream } from "bored-mplex";
+import got from "got";
 
 export type AgentProxyOptions = {
   boredServer: string;
@@ -53,8 +54,12 @@ export class AgentProxy {
     }, 10_000);
   }
 
-  connect(reconnect = false) {
+  async connect(reconnect = false) {
     if (!reconnect) logger.info(`[PROXY] establishing reverse tunnel to ${this.boredServer} ...`);
+
+    if (this.idpPublicKey === "") {
+      await this.syncPublicKeyFromServer();
+    }
 
     this.ws = new WebSocket(`${this.boredServer}/agent/connect`, {
       headers: {
@@ -94,6 +99,17 @@ export class AgentProxy {
       this.closeTlsSockets();
       retry();
     });
+  }
+
+  protected async syncPublicKeyFromServer() {
+    try {
+      const res = await got.get(`${this.boredServer}/.well-known/public_key`);
+
+      logger.info(`[PROXY] fetched idp public key from server`);
+      this.idpPublicKey = res.body;
+    } catch(error) {
+      throw new Error(`failed to fetch idp public key from server: ${error}`);
+    }
   }
 
   protected closeTlsSockets() {

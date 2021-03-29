@@ -54,18 +54,23 @@ e+lf4s4OxQawWD79J9/5d3Ry0vbV3Am1FtGJiJvOwRsIfVChDpYStTcHTCMqtvWb
 V6L11BWkpzGXSW4Hv43qa+GSYOD2QU68Mb59oSk2OB+BtOLpJofmbGEGgvmwyCI9
 MwIDAQAB
 -----END PUBLIC KEY-----`;
+  
+  // for verify aud in jwt
+  const boredServer = "http://bored:6666";
 
   it ("impersonates on valid jwt token", async () => {
     const stream = new PassThrough();
     const parser = new StreamImpersonator();
     const destination = new DummyWritable();
 
+    parser.boredServer = boredServer;
     parser.saToken = "service-account-token";
     parser.publicKey = jwtPublicKey;
 
     const token = jwt.sign({
       exp: Math.floor(Date.now() / 1000) + (60 * 60),
-      sub: "johndoe"
+      sub: "johndoe",
+      aud: [boredServer]
     }, jwtPrivateKey, { algorithm: "RS256" });
 
     stream.pipe(parser).pipe(destination);
@@ -79,13 +84,15 @@ MwIDAQAB
     const parser = new StreamImpersonator();
     const destination = new DummyWritable();
 
+    parser.boredServer = boredServer;
     parser.saToken = "service-account-token";
     parser.publicKey = jwtPublicKey;
 
     const token = jwt.sign({
       exp: Math.floor(Date.now() / 1000) + (60 * 60),
       sub: "johndoe",
-      groups: ["dev", "ops"]
+      groups: ["dev", "ops"],
+      aud: [boredServer]
     }, jwtPrivateKey, { algorithm: "RS256" });
 
     stream.pipe(parser).pipe(destination);
@@ -99,12 +106,14 @@ MwIDAQAB
     const parser = new StreamImpersonator();
     const destination = new DummyWritable();
 
+    parser.boredServer = boredServer;
     parser.saToken = "service-account-token";
     parser.publicKey = jwtPublicKey;
 
     const token = jwt.sign({
       exp: Math.floor(Date.now() / 1000) + (60 * 60),
-      sub: "johndoe"
+      sub: "johndoe",
+      aud: [boredServer]
     }, jwtPrivateKey, { algorithm: "RS256" });
 
     stream.pipe(parser).pipe(destination);
@@ -118,12 +127,14 @@ MwIDAQAB
     const parser = new StreamImpersonator();
     const destination = new DummyWritable();
 
+    parser.boredServer = boredServer;
     parser.saToken = "service-account-token";
     parser.publicKey = jwtPublicKey;
 
     const token = jwt.sign({
       exp: Math.floor(Date.now() / 1000) + (60 * 60),
-      sub: "johndoe"
+      sub: "johndoe",
+      aud: [boredServer]
     }, jwtPrivateKey, { algorithm: "RS256" });
 
     stream.pipe(parser).pipe(destination);
@@ -144,12 +155,14 @@ MwIDAQAB
     const parser = new StreamImpersonator();
     const destination = new DummyWritable();
 
+    parser.boredServer = boredServer;
     parser.saToken = "service-account-token";
     parser.publicKey = jwtPublicKey;
 
     const token = jwt.sign({
       exp: Math.floor(Date.now() / 1000) + (60 * 60),
-      sub: "johndoe"
+      sub: "johndoe",
+      aud: [boredServer]
     }, jwtPrivateKey, { algorithm: "RS256" });
 
     stream.pipe(parser).pipe(destination);
@@ -165,12 +178,14 @@ MwIDAQAB
     const parser = new StreamImpersonator();
     const destination = new DummyWritable();
 
+    parser.boredServer = boredServer;
     parser.saToken = "service-account-token";
     parser.publicKey = jwtPublicKey;
 
     const token = jwt.sign({
       exp: Math.floor(Date.now() / 1000) + (60 * 60),
-      sub: "johndoe"
+      sub: "johndoe",
+      aud: [boredServer]
     }, jwtPrivateKey, { algorithm: "RS256" });
 
     stream.pipe(parser).pipe(destination);
@@ -197,5 +212,24 @@ MwIDAQAB
     stream.write("hello world");
 
     expect(destination.buffer.toString()).toMatchSnapshot();
+  });
+
+  it("does not impersonate on if token.aud is mismatch", async () => {
+    const stream = new PassThrough();
+    const parser = new StreamImpersonator();
+    const destination = new DummyWritable();
+
+    parser.boredServer = "aud_one";
+    parser.saToken = "service-account-token";
+    parser.publicKey = jwtPublicKey;
+
+    const token = jwt.sign({
+      aud: ["aud_two"]
+    }, jwtPrivateKey, { algorithm: "RS256" });
+
+    stream.pipe(parser).pipe(destination);
+    stream.write(`GET / HTTP/1.1\r\nAccept: application/json\r\nContent-`);
+    stream.write(`Type: application/json\r\nAuthorization: Bearer ${token}\r\n\r\n`);
+    expect(destination.buffer.toString().includes("Impersonate-User")).toBe(false);
   });
 });

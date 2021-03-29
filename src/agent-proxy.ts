@@ -155,6 +155,7 @@ export class AgentProxy {
           const streamImpersonator = new StreamImpersonator();
 
           streamImpersonator.publicKey = this.idpPublicKey;
+          streamImpersonator.boredServer = this.boredServer;
           streamImpersonator.saToken = this.serviceAccountToken.toString();
           parser.pipe(decipher).pipe(streamImpersonator).pipe(socket).pipe(cipher).pipe(stream);
         } else {

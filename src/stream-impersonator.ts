@@ -16,6 +16,7 @@ export class StreamImpersonator extends Transform {
   static maxHeaderSize = 80 * 1024;
   static verbs = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"];
 
+  public boredServer = "";
   public publicKey = "";
   public saToken = "";
   private httpHeadersEnded = false;
@@ -91,7 +92,8 @@ export class StreamImpersonator extends Transform {
   impersonateJwtToken(chunk: Buffer, token: string) {
     try {
       const tokenData = jwt.verify(token, this.publicKey, {
-        algorithms: ["RS256", "RS384", "RS512"]
+        algorithms: ["RS256", "RS384", "RS512"],
+        audience: [this.boredServer]
       }) as TokenPayload;
       const impersonatedHeaders: Buffer[] = [Buffer.from(this.saToken), StreamImpersonator.newlineBuffer];
 

@@ -224,7 +224,7 @@ MwIDAQAB
     parser.publicKey = jwtPublicKey;
 
     const token = jwt.sign({
-      aud: ["aud_one"]
+      aud: ["aud_two"]
     }, jwtPrivateKey, { algorithm: "RS256" });
 
     stream.pipe(parser).pipe(destination);

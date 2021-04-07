@@ -1,13 +1,14 @@
 import WebSocket from "ws";
 import * as tls from "tls";
 import * as fs from "fs";
+import got from "got";
+import { BoredMplex, Stream } from "bored-mplex";
 import { createDecipheriv, createCipheriv } from "crypto";
 import { KeyPair } from "./keypair-manager";
 import { StreamParser } from "./stream-parser";
 import { StreamImpersonator } from "./stream-impersonator";
 import logger from "./logger";
-import { BoredMplex, Stream } from "bored-mplex";
-import got from "got";
+import { wait } from "./utils/wait";
 
 export type AgentProxyOptions = {
   boredServer: string;
@@ -102,13 +103,17 @@ export class AgentProxy {
   }
 
   protected async syncPublicKeyFromServer() {
-    try {
-      const res = await got.get(`${this.boredServer}/.well-known/public_key`);
+    while (!this.idpPublicKey) {
+      try {
+        const res = await got.get(`${this.boredServer}/.well-known/public_key`);
 
-      logger.info(`[PROXY] fetched idp public key from server`);
-      this.idpPublicKey = res.body;
-    } catch(error) {
-      throw new Error(`failed to fetch idp public key from server: ${error}`);
+        logger.info(`[PROXY] fetched idp public key from server`);
+        this.idpPublicKey = res.body;
+      } catch(error) {
+        logger.error("failed to fetch idp public key from server: %s", error);
+
+        await wait(3_000);
+      }
     }
   }
 

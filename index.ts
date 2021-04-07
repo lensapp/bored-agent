@@ -32,7 +32,10 @@ const keyPairManager = new KeyPairManager(namespace);
 
 keyPairManager.ensureKeys().then((keys) => {
   proxy.init(keys);
-  proxy.connect();
+  proxy.connect().catch((reason) => {
+    logger.error("[MAIN] failed to connect %s", reason);
+    process.exit(1);
+  });
 }).catch((reason) => {
   logger.error("[MAIN] failed to create certificates %s", reason);
   process.exit(1);

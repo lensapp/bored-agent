@@ -8,7 +8,6 @@ import { KeyPair } from "./keypair-manager";
 import { StreamParser } from "./stream-parser";
 import { StreamImpersonator } from "./stream-impersonator";
 import logger from "./logger";
-import { wait } from "./utils/wait";
 
 export type AgentProxyOptions = {
   boredServer: string;
@@ -51,7 +50,7 @@ export class AgentProxy {
     this.keys = keys;
 
     setInterval(() => {
-      logger.info(`[PROXY] ${this.tlsSockets.length} active sockets`);
+      if (this.ws) logger.info(`[PROXY] ${this.tlsSockets.length} active sockets`);
     }, 10_000);
   }
 
@@ -103,17 +102,19 @@ export class AgentProxy {
   }
 
   protected async syncPublicKeyFromServer() {
-    while (!this.idpPublicKey) {
-      try {
-        const res = await got.get(`${this.boredServer}/.well-known/public_key`);
+    try {
+      const res = await got.get(`${this.boredServer}/.well-known/public_key`, {
+        retry: {
+          limit: 6
+        }
+      });
 
-        logger.info(`[PROXY] fetched idp public key from server`);
-        this.idpPublicKey = res.body;
-      } catch(error) {
-        logger.error("failed to fetch idp public key from server: %s", error);
+      logger.info(`[PROXY] fetched idp public key from server`);
+      this.idpPublicKey = res.body;
+    } catch(error) {
+      logger.error("[PROXY] failed to fetch idp public key from server");
 
-        await wait(3_000);
-      }
+      throw error;
     }
   }
 

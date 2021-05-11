@@ -12,7 +12,7 @@
     "lint": "yarn run eslint --ext js,ts --max-warnings=0 ."
   },
   "devDependencies": {
-    "@types/jest": "^26.0.20",
+    "@types/jest": "^26.0.23",
     "@types/jsonwebtoken": "^8.5.0",
     "@types/pino": "^6.3.6",
     "@types/ws": "^7.4.0",

@@ -1092,12 +1092,12 @@ bcrypt-pbkdf@^1.0.0:
   dependencies:
     tweetnacl "^0.14.3"
 
-bored-mplex@^0.0.15:
-  version "0.0.15"
-  resolved "https://registry.yarnpkg.com/bored-mplex/-/bored-mplex-0.0.15.tgz#a5fc1a77a81866b13fdae4bf6143b5281b977ccc"
-  integrity sha512-ApKR7F34WQwrKzGo8ot5rduzA6GDh5iuO+xcd7eNWZbpJCj/RjkSMI3OiC1epDhe8/Tuwy2TtVjHr71HGtaAaA==
+bored-mplex@^0.0.17:
+  version "0.0.17"
+  resolved "https://registry.yarnpkg.com/bored-mplex/-/bored-mplex-0.0.17.tgz#b1237998529981a23248a872b3f8b788b0c58f00"
+  integrity sha512-nPyxQSySRjFsHr5kp2uacOD03hRT63i5+Uia+iYXvfj8ZeBAK5DjTjY+pGfB747fGJ6Dayv71zRs1YI3N68oow==
   dependencies:
-    msgpackr "^1.2.7"
+    msgpackr "1.2.9"
 
 brace-expansion@^1.1.7:
   version "1.1.11"
@@ -3334,20 +3334,20 @@ ms@^2.1.1:
   resolved "https://registry.yarnpkg.com/ms/-/ms-2.1.3.tgz#574c8138ce1d2b5861f0b44579dbadd60c6615b2"
   integrity sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==
 
-msgpackr-extract@^1.0.6:
-  version "1.0.6"
-  resolved "https://registry.yarnpkg.com/msgpackr-extract/-/msgpackr-extract-1.0.6.tgz#65713a266de36d7dce8edcb766a7b4e5aa5f12ca"
-  integrity sha512-xDZjVWdBDQqohlB14/tbuhtFGsnQqZxE9/aJNz4iTxfGANtuajSCC6wJ72vYPR/k3hKtgLyL76E7xi6t2hcS+Q==
+msgpackr-extract@^1.0.7:
+  version "1.0.9"
+  resolved "https://registry.yarnpkg.com/msgpackr-extract/-/msgpackr-extract-1.0.9.tgz#1b15e5ecfadb8f93a933088843808ca4440a49ae"
+  integrity sha512-6b0u9/zo9lFJvexpjcTb6a3m23yBr3JcUFm+xZWG4fj+pLiXyA8OMwQS0XElO1gexwQBCW0EXBKX7OHCm/YQKQ==
   dependencies:
     nan "^2.14.2"
     node-gyp-build "^4.2.3"
 
-msgpackr@^1.2.7:
-  version "1.2.7"
-  resolved "https://registry.yarnpkg.com/msgpackr/-/msgpackr-1.2.7.tgz#374e17a294b52f2155bf3d54182a0888be286cad"
-  integrity sha512-U6Sef+XZjTRQoXZt9GPFf/2h4yhjsB2Kvb1Uq6N19wliryVvrq8onYPzgFnm9/byjDzpRWbJqXesp2AqX15Htg==
+msgpackr@1.2.9:
+  version "1.2.9"
+  resolved "https://registry.yarnpkg.com/msgpackr/-/msgpackr-1.2.9.tgz#1a4735be9618794592ab710fdd77a7f5392f3ba9"
+  integrity sha512-0/Vrb0H+yFUzwUoO+lcG1L82qPS5UeGZGoqFF82BedfAD3q3VLBVl8ZjFgdBaYYN+arKKtjKEJk9I+pH/xRSFA==
   optionalDependencies:
-    msgpackr-extract "^1.0.6"
+    msgpackr-extract "^1.0.7"
 
 nan@^2.14.2:
   version "2.14.2"

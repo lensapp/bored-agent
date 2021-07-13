@@ -76,6 +76,33 @@ Impersonate-User: johndoe
 {\\"apiVersion\\":\\"authorization.k8s.io/v1\\",\\"kind\\":\\"SelfSubjectAccessReview\\",\\"spec\\":{\\"resourceAttributes\\":{\\"namespace\\":\\"kube-system\\",\\"resource\\":\\"*\\",\\"verb\\":\\"create\\"}}}{\\"apiVersion\\":\\"authorization.k8s.io/v1\\",\\"kind\\":\\"SelfSubjectAccessReview\\",\\"spec\\":{\\"resourceAttributes\\":{\\"namespace\\":\\"kube-system\\",\\"resource\\":\\"*\\",\\"verb\\":\\"create\\"}}}"
 `;
 
+exports[`StreamImpersonator handles port-forward upgrade 1`] = `
+"POST /apis/authorization.k8s.io/v1/selfsubjectaccessreviews HTTP/1.1
+Accept: application/json
+Content-Type: application/json
+Content-Length: 0
+Connection: Upgrade
+Authorization: Bearer service-account-token
+Impersonate-User: johndoe
+
+GET /version HTTP/1.1
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2MjYxOTA3ODcsInN1YiI6ImpvaG5kb2UiLCJhdWQiOlsiaHR0cDovL2JvcmVkOjY2NjYiXSwiaWF0IjoxNjI2MTg3MTg3fQ.FxaoYXJUK7lrousxq2MbDSrjfpTHxAy5zfdYuLwUMlbRCqtG1d59mhSy5Ws4LULYsIOSfeJ6VofMY-MZKbi7Cf7CNlfyHv5o1ZQoztv8kME9ydCy2Q1bBqw2IcffNz7xFDFYjqMftKamDn1v6R5EI315yGkj3ot4HtFAhj-IDizi69zlQtkmXHP0otktCVO_7STDsZbSql9fD_PGto8V1vS3tzad3mekwU6UAM2pBJtNdWn0HFeNqpNEGG-2oUChqy_dsQ7YquXkcXKqNs1RwE-bvSVwKr-5nVEDN4UEdZnDH61F3tKDd7wrZps3m8oIYjrMrikBtnDQNyEXcgFpSw
+
+POST /foo HTTP/1.1
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2MjYxOTA3ODcsInN1YiI6ImpvaG5kb2UiLCJhdWQiOlsiaHR0cDovL2JvcmVkOjY2NjYiXSwiaWF0IjoxNjI2MTg3MTg3fQ.FxaoYXJUK7lrousxq2MbDSrjfpTHxAy5zfdYuLwUMlbRCqtG1d59mhSy5Ws4LULYsIOSfeJ6VofMY-MZKbi7Cf7CNlfyHv5o1ZQoztv8kME9ydCy2Q1bBqw2IcffNz7xFDFYjqMftKamDn1v6R5EI315yGkj3ot4HtFAhj-IDizi69zlQtkmXHP0otktCVO_7STDsZbSql9fD_PGto8V1vS3tzad3mekwU6UAM2pBJtNdWn0HFeNqpNEGG-2oUChqy_dsQ7YquXkcXKqNs1RwE-bvSVwKr-5nVEDN4UEdZnDH61F3tKDd7wrZps3m8oIYjrMrikBtnDQNyEXcgFpSw
+
+barGET /foo HTTP/1.1
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2MjYxOTA3ODcsInN1YiI6ImpvaG5kb2UiLCJhdWQiOlsiaHR0cDovL2JvcmVkOjY2NjYiXSwiaWF0IjoxNjI2MTg3MTg3fQ.FxaoYXJUK7lrousxq2MbDSrjfpTHxAy5zfdYuLwUMlbRCqtG1d59mhSy5Ws4LULYsIOSfeJ6VofMY-MZKbi7Cf7CNlfyHv5o1ZQoztv8kME9ydCy2Q1bBqw2IcffNz7xFDFYjqMftKamDn1v6R5EI315yGkj3ot4HtFAhj-IDizi69zlQtkmXHP0otktCVO_7STDsZbSql9fD_PGto8V1vS3tzad3mekwU6UAM2pBJtNdWn0HFeNqpNEGG-2oUChqy_dsQ7YquXkcXKqNs1RwE-bvSVwKr-5nVEDN4UEdZnDH61F3tKDd7wrZps3m8oIYjrMrikBtnDQNyEXcgFpSw
+
+"
+`;
+
 exports[`StreamImpersonator impersonates groups on valid jwt token 1`] = `
 "GET / HTTP/1.1
 Accept: application/json

@@ -12,6 +12,7 @@ type TokenPayload = {
 export class StreamImpersonator extends Transform {
   static newlineBuffer = Buffer.from("\r\n");
   static bodySeparatorBuffer = Buffer.from("\r\n\r\n");
+  static connectionUpgradeBuffer = Buffer.from("Connection: Upgrade");
   static authorizationSearch = "Authorization: Bearer ";
   static maxHeaderSize = 80 * 1024;
   static verbs = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"];
@@ -51,7 +52,10 @@ export class StreamImpersonator extends Transform {
     }
 
     this.httpHeadersEnded = true;
-    this.httpHeadersStarted = false;
+
+    if (headerBuffer.indexOf(StreamImpersonator.connectionUpgradeBuffer) === -1) {
+      this.httpHeadersStarted = false;
+    }
 
     const jwtToken = this.parseTokenFromHttpHeaders(headerBuffer);
 

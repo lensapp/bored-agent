@@ -196,6 +196,33 @@ MwIDAQAB
     expect(destination.buffer.toString()).toMatchSnapshot();
   });
 
+  it ("handles port-forward upgrade", async () => {
+    const stream = new PassThrough();
+    const parser = new StreamImpersonator();
+    const destination = new DummyWritable();
+
+    parser.boredServer = boredServer;
+    parser.saToken = "service-account-token";
+    parser.publicKey = jwtPublicKey;
+
+    const token = jwt.sign({
+      exp: Math.floor(Date.now() / 1000) + (60 * 60),
+      sub: "johndoe",
+      aud: [boredServer]
+    }, jwtPrivateKey, { algorithm: "RS256" });
+
+    stream.pipe(parser).pipe(destination);
+
+    const thirdPartyToken = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c`;
+
+    stream.write(`POST /apis/authorization.k8s.io/v1/selfsubjectaccessreviews HTTP/1.1\r\nAccept: application/json\r\nContent-Type:`);
+    stream.write(` application/json\r\nContent-Length: 0\r\nConnection: Upgrade\r\nAuthorization: Bearer ${token}\r\n\r\n`);
+    stream.write(`GET /version HTTP/1.1\r\nAccept: application/json\r\nContent-Type: application/json\r\nAuthorization: Bearer ${thirdPartyToken}\r\n\r\n`);
+    stream.write(`POST /foo HTTP/1.1\r\nAccept: application/json\r\nContent-Type: application/json\r\nAuthorization: Bearer ${thirdPartyToken}\r\n\r\nbar`);
+    stream.write(`GET /foo HTTP/1.1\r\nAccept: application/json\r\nContent-Type: application/json\r\nAuthorization: Bearer ${thirdPartyToken}\r\n\r\n`);
+    expect(destination.buffer.toString()).toMatchSnapshot();
+  });
+
   it("does not impersonate on invalid token", async () => {
     const stream = new PassThrough();
     const parser = new StreamImpersonator();

@@ -1,7 +1,8 @@
 import WebSocket from "ws";
 import * as tls from "tls";
 import * as fs from "fs";
-import got from "got";
+import got, { OptionsOfTextResponseBody } from "got";
+import { HttpsProxyAgent } from "https-proxy-agent";
 import { BoredMplex, Stream } from "bored-mplex";
 import { createDecipheriv, createCipheriv } from "crypto";
 import { KeyPair } from "./keypair-manager";
@@ -54,6 +55,21 @@ export class AgentProxy {
     }, 10_000);
   }
 
+  buildWebSocketOptions(): WebSocket.ClientOptions {
+    const options: WebSocket.ClientOptions = {
+      headers: {
+        "Authorization": `Bearer ${this.boredToken}`,
+        "X-BoreD-PublicKey": Buffer.from(this.keys?.public || "").toString("base64")
+      }
+    };
+
+    if (process.env.HTTPS_PROXY) {
+      options.agent = new HttpsProxyAgent(process.env.HTTPS_PROXY);
+    }
+
+    return options;
+  }
+
   async connect(reconnect = false) {
     if (!reconnect) logger.info(`[PROXY] establishing reverse tunnel to ${this.boredServer} ...`);
 
@@ -61,12 +77,7 @@ export class AgentProxy {
       await this.syncPublicKeyFromServer();
     }
 
-    this.ws = new WebSocket(`${this.boredServer}/agent/connect`, {
-      headers: {
-        "Authorization": `Bearer ${this.boredToken}`,
-        "X-BoreD-PublicKey": Buffer.from(this.keys?.public || "").toString("base64")
-      }
-    });
+    this.ws = new WebSocket(`${this.boredServer}/agent/connect`, this.buildWebSocketOptions());
     this.ws.on("open", () => {
       if (!this.ws) return;
 
@@ -101,13 +112,23 @@ export class AgentProxy {
     });
   }
 
+  buildGotOptions() {
+    const options: OptionsOfTextResponseBody = {
+      retry: {
+        limit: 6
+      }
+    };
+
+    if (process.env.HTTPS_PROXY) {
+      options.agent = { https: new HttpsProxyAgent(process.env.HTTPS_PROXY) };
+    }
+
+    return options;
+  }
+
   protected async syncPublicKeyFromServer() {
     try {
-      const res = await got.get(`${this.boredServer}/.well-known/public_key`, {
-        retry: {
-          limit: 6
-        }
-      });
+      const res = await got.get(`${this.boredServer}/.well-known/public_key`, this.buildGotOptions());
 
       logger.info(`[PROXY] fetched idp public key from server`);
       this.idpPublicKey = res.body;

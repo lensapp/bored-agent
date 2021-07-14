@@ -1,26 +1,27 @@
+import { Agents } from "got/dist/source";
 import { HttpsProxyAgent } from "https-proxy-agent";
 import { AgentProxy } from "../agent-proxy";
 
 describe("AgentProxy", () => {
+  const OLD_ENV = process.env;
+  let agent: AgentProxy;
+
+  beforeEach(() => {
+    jest.resetModules();
+    process.env = { ...OLD_ENV };
+    agent = new AgentProxy({
+      boredServer: "https://bored.acme.org",
+      boredToken: "foo.bar.baz",
+      idpPublicKey: "this-is-not-valid"
+    });
+  });
+
+  afterEach(() => {
+    process.env = OLD_ENV;
+  });
+
   describe("buildWebSocketOptions", () => {
-    const OLD_ENV = process.env;
-
-    beforeEach(() => {
-      jest.resetModules();
-      process.env = { ...OLD_ENV };
-    });
-
-    afterEach(() => {
-      process.env = OLD_ENV;
-    });
-
     it("returns correct defaults", () => {
-      const agent = new AgentProxy({
-        boredServer: "https://bored.acme.org",
-        boredToken: "foo.bar.baz",
-        idpPublicKey: "this-is-not-valid"
-      });
-
       expect(agent.buildWebSocketOptions()).toEqual({
         headers: {
           "Authorization": "Bearer foo.bar.baz",
@@ -32,13 +33,24 @@ describe("AgentProxy", () => {
     it("sets agent if HTTPS_PROXY is set", () => {
       process.env.HTTPS_PROXY = "http://proxy.acme.org:8080";
 
-      const agent = new AgentProxy({
-        boredServer: "https://bored.acme.org",
-        boredToken: "foo.bar.baz",
-        idpPublicKey: "this-is-not-valid"
-      });
-
       expect(agent.buildWebSocketOptions().agent).toBeInstanceOf(HttpsProxyAgent);
+    });
+  });
+
+  describe("buildGotOptions", () => {
+    it("returns correct defaults", () => {
+      expect(agent.buildGotOptions()).toEqual({
+        retry: {
+          limit: 6
+        }
+      });
+    });
+
+    it("sets agent.https if HTTPS_PROXY is set", () => {
+      process.env.HTTPS_PROXY = "http://proxy.acme.org:8080";
+
+      expect(agent.buildGotOptions().agent).toBeDefined();
+      expect((agent.buildGotOptions().agent as Agents).https).toBeInstanceOf(HttpsProxyAgent);
     });
   });
 });

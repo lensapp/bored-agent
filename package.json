@@ -16,7 +16,7 @@
     "@types/jsonwebtoken": "^8.5.0",
     "@types/pino": "^6.3.8",
     "@types/ws": "^7.4.0",
-    "@typescript-eslint/eslint-plugin": "^4.23.0",
+    "@typescript-eslint/eslint-plugin": "^4.28.4",
     "@typescript-eslint/parser": "^4.28.3",
     "eslint": "^7.7.0",
     "eslint-plugin-unused-imports": "^1.0.1",

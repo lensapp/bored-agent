@@ -31,7 +31,7 @@
     "got": "^11.8.2",
     "jsonwebtoken": "^8.5.1",
     "pino": "^6.13.0",
-    "pino-pretty": "^4.7.1",
+    "pino-pretty": "^5.1.2",
     "ws": "^7.4.6"
   }
 }

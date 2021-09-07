@@ -16,7 +16,7 @@
     "@types/jsonwebtoken": "^8.5.5",
     "@types/pino": "^6.3.11",
     "@types/ws": "^7.4.7",
-    "@typescript-eslint/eslint-plugin": "^4.29.2",
+    "@typescript-eslint/eslint-plugin": "^4.31.0",
     "@typescript-eslint/parser": "^4.30.0",
     "eslint": "^7.32.0",
     "eslint-plugin-unused-imports": "^1.1.4",
@@ -30,7 +30,7 @@
     "got": "^11.8.2",
     "https-proxy-agent": "^5.0.0",
     "jsonwebtoken": "^8.5.1",
-    "pino": "^6.13.0",
+    "pino": "^6.13.2",
     "pino-pretty": "^4.7.1",
     "ws": "^7.4.6"
   }

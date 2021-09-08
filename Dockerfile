@@ -1,14 +1,14 @@
-FROM node:14-alpine as build
+FROM node:16-alpine as build
 
 RUN mkdir /app
 WORKDIR /app
 COPY . /app
-RUN apk add --update python gcc g++ make && \
+RUN apk add --update gcc g++ make && \
     yarn install --frozen-lockfile && \
     yarn dist && \
     yarn install --frozen-lockfile --prod
 
-FROM node:14-alpine
+FROM node:16-alpine
 
 RUN mkdir /app
 WORKDIR /app

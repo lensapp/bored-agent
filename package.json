@@ -9,7 +9,8 @@
     "dev": "skaffold dev --status-check=false",
     "test": "yarn jest",
     "dist": "yarn tsc",
-    "lint": "yarn run eslint --ext js,ts --max-warnings=0 ."
+    "lint": "yarn run eslint --ext js,ts --max-warnings=0 .",
+    "build-image": "docker build -t bored-agent:latest ."
   },
   "devDependencies": {
     "@types/jest": "^27.0.1",
@@ -26,9 +27,11 @@
     "typescript": "^4.3.5"
   },
   "dependencies": {
+    "@kubernetes/client-node": "^0.15.1",
     "bored-mplex": "^0.0.17",
     "got": "^11.8.2",
     "https-proxy-agent": "^5.0.0",
+    "js-yaml": "^4.1.0",
     "jsonwebtoken": "^8.5.1",
     "pino": "^6.13.2",
     "pino-pretty": "^4.7.1",

@@ -30,7 +30,7 @@
     "got": "^11.8.2",
     "https-proxy-agent": "^5.0.0",
     "jsonwebtoken": "^8.5.1",
-    "pino": "^6.13.0",
+    "pino": "^6.13.2",
     "pino-pretty": "^4.7.1",
     "ws": "^7.4.6"
   }

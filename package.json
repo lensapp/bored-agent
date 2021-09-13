@@ -32,7 +32,6 @@
     "bored-mplex": "^0.0.17",
     "got": "^11.8.2",
     "https-proxy-agent": "^5.0.0",
-    "js-yaml": "^4.1.0",
     "jsonwebtoken": "^8.5.1",
     "pino": "^6.13.2",
     "pino-pretty": "^4.7.1",

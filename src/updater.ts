@@ -1,6 +1,5 @@
 import * as k8s from "@kubernetes/client-node";
 import type { KubeConfig } from "@kubernetes/client-node";
-import * as yaml from "js-yaml";
 import got from "got";
 
 /**
@@ -21,7 +20,7 @@ import got from "got";
 async function applyBoredAgentYml(kc: KubeConfig, specString: string): Promise<k8s.KubernetesObject[]> {
   console.log("Applying bored-agent.yml...");
   const client = k8s.KubernetesObjectApi.makeApiClient(kc);
-  const specs = yaml.loadAll(specString) as k8s.KubernetesObject[] ;
+  const specs = k8s.loadAllYaml(specString) as k8s.KubernetesObject[] ;
   const validSpecs = specs.filter((spec) => spec && spec.kind && spec.metadata);
   const created: k8s.KubernetesObject[] = [];
 

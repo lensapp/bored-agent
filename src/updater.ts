@@ -84,7 +84,7 @@ function getConfig() {
 type Config = ReturnType<typeof getConfig>;
 
 async function fetchBoredAgentYml(config: Config) {
-  const url = `${config.LENS_BACKEND_URL}/bored-agent/bored-agent.yml`;
+  const url = `${config.LENS_BACKEND_URL}/bored-agent/v2/bored-agent.yml`;
 
   console.log(`Fetching bored-agent.yml from ${url}`);
 

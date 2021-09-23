@@ -36,7 +36,7 @@ export class StreamParser extends Transform {
       this.bodyParser?.(decryptedHeader.key, decryptedHeader.iv);
 
       return callback();
-    } catch(error) {
+    } catch(error: any) {
       return callback(error);
     }
   }

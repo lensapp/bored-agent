@@ -204,6 +204,11 @@ export class AgentProxy {
       socket.end();
     });
 
+    socket.on("error", (error) => {
+      logger.info("[PROXY] TLS socket error: ", error);
+      socket.end();
+    });
+
     socket.on("end", () => {
       this.tlsSockets = this.tlsSockets.filter((tlsSocket) => tlsSocket !== socket);
       stream.end();

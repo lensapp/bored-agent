@@ -3,6 +3,8 @@ import { KeyPairManager } from "./src/keypair-manager";
 import { version } from "./package.json";
 import logger from "./src/logger";
 
+process.title = "bored-agent";
+
 logger.info(`[MAIN] ~~ BoreD Agent v${version} ~~`);
 
 const boredServer = process.env.BORED_SERVER || "http://bored:8080";
@@ -41,12 +43,19 @@ keyPairManager.ensureKeys().then((keys) => {
   process.exit(1);
 });
 
+process.once("SIGHUP", () => {
+  logger.info("[MAIN] got SIGHUP, closing websocket connection");
+  proxy.disconnect();
+});
+
 process.once("SIGTERM", () => {
+  logger.info("[MAIN] got SIGTERM, closing websocket connection");
   proxy.disconnect();
   process.exit(0);
 });
 
 process.once("SIGINT", () => {
+  logger.info("[MAIN] got SIGINT, closing websocket connection");
   proxy.disconnect();
   process.exit(0);
 });

@@ -3,6 +3,8 @@ import { KeyPairManager } from "./src/keypair-manager";
 import { version } from "./package.json";
 import logger from "./src/logger";
 
+process.title = "bored-agent";
+
 logger.info(`[MAIN] ~~ BoreD Agent v${version} ~~`);
 
 const boredServer = process.env.BORED_SERVER || "http://bored:8080";

@@ -41,6 +41,10 @@ keyPairManager.ensureKeys().then((keys) => {
   process.exit(1);
 });
 
+process.once("SIGHUP", () => {
+  proxy.disconnect();
+});
+
 process.once("SIGTERM", () => {
   proxy.disconnect();
   process.exit(0);

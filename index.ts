@@ -44,15 +44,18 @@ keyPairManager.ensureKeys().then((keys) => {
 });
 
 process.once("SIGHUP", () => {
+  logger.info("[MAIN] got SIGHUP, closing websocket connection");
   proxy.disconnect();
 });
 
 process.once("SIGTERM", () => {
+  logger.info("[MAIN] got SIGTERM, closing websocket connection");
   proxy.disconnect();
   process.exit(0);
 });
 
 process.once("SIGINT", () => {
+  logger.info("[MAIN] got SIGINT, closing websocket connection");
   proxy.disconnect();
   process.exit(0);
 });

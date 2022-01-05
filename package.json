@@ -29,7 +29,7 @@
   },
   "dependencies": {
     "@kubernetes/client-node": "^0.15.1",
-    "bored-mplex": "^0.0.17",
+    "bored-mplex": "^0.0.20",
     "got": "^11.8.2",
     "https-proxy-agent": "^5.0.0",
     "jsonwebtoken": "^8.5.1",

@@ -1,5 +1,6 @@
 import WebSocket from "ws";
 import * as tls from "tls";
+import * as net from "net";
 import * as fs from "fs";
 import got, { OptionsOfTextResponseBody } from "got";
 import { HttpsProxyAgent } from "https-proxy-agent";
@@ -14,6 +15,10 @@ export type AgentProxyOptions = {
   boredServer: string;
   boredToken: string;
   idpPublicKey: string;
+};
+
+export type StreamHeader = {
+  target: string;
 };
 
 const caCert = process.env.CA_CERT || "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt";
@@ -149,7 +154,83 @@ export class AgentProxy {
     });
   }
 
-  handleRequestStream(stream: Stream) {
+  handleRequestStream(stream: Stream, data?: Buffer) {
+    if (data) {
+      const header = JSON.parse(data.toString()) as StreamHeader;
+      const protocol = header.target.split("://")[0];
+
+      switch(protocol) {
+        case "unix": {
+          this.handleUnixRequestStream(stream, header.target);
+          break;
+        }
+
+        case "tcp": {
+          const url = new URL(header.target);
+
+          this.handleTcpRequestStream(stream, url.hostname, parseInt(url.port));
+          break;
+        }
+
+        default: {
+          logger.error("invalid stream target protocol %s", protocol);
+          stream.end();
+        }
+      }
+    } else {
+      this.handleDefaultRequestStream(stream);
+    }
+  }
+
+  handleTcpRequestStream(stream: Stream, host: string, port: number) {
+    const socket = net.createConnection(port, host, () => {
+      stream.pipe(socket).pipe(stream);
+    });
+
+    socket.on("timeout", () => {
+      socket.end();
+    });
+
+    socket.on("error", (error) => {
+      logger.info("[PROXY] tcp socket error: ", error);
+      socket.end();
+    });
+
+    socket.on("end", () => {
+      stream.end();
+    });
+
+    stream.on("finish", () => {
+      logger.info("[PROXY] tcp stream ended");
+      socket.end();
+    });
+  }
+
+  handleUnixRequestStream(stream: Stream, socketPath: string) {
+    const socket = net.createConnection(socketPath, () => {
+      stream.pipe(socket).pipe(stream);
+    });
+
+    socket.on("timeout", () => {
+      socket.end();
+    });
+
+    socket.on("error", (error) => {
+      logger.info("[PROXY] unix socket error: ", error);
+      socket.end();
+    });
+
+    socket.on("end", () => {
+      stream.end();
+    });
+
+    stream.on("finish", () => {
+      logger.info("[PROXY] unix stream ended");
+      socket.end();
+    });
+  }  
+
+  handleDefaultRequestStream(stream: Stream) {
     const opts: tls.ConnectionOptions = {
       host: process.env.KUBERNETES_HOST || "kubernetes.default.svc",
       port: parseInt(process.env.KUBERNETES_SERVICE_PORT || "443"),

@@ -1,5 +1,6 @@
 import WebSocket from "ws";
 import * as tls from "tls";
+import * as net from "net";
 import * as fs from "fs";
 import got, { OptionsOfTextResponseBody } from "got";
 import { HttpsProxyAgent } from "https-proxy-agent";
@@ -14,6 +15,10 @@ export type AgentProxyOptions = {
   boredServer: string;
   boredToken: string;
   idpPublicKey: string;
+};
+
+export type StreamHeader = {
+  target: string;
 };
 
 const caCert = process.env.CA_CERT || "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt";
@@ -149,7 +154,115 @@ export class AgentProxy {
     });
   }
 
-  handleRequestStream(stream: Stream) {
+  handleRequestStream(stream: Stream, data?: Buffer) {
+    if (data) {
+      let protocol = "";
+      let header: StreamHeader;
+
+      try {
+        header = JSON.parse(data.toString()) as StreamHeader;
+
+        protocol = header?.target?.split("://")[0];
+      } catch (error) {
+        logger.error("[PROXY] invalid stream open data: %o", error);
+        stream.end();
+
+        return;
+      }
+
+
+      switch(protocol) {
+        case "unix": {
+          this.handleUnixRequestStream(stream, header.target.replace("unix://", ""));
+          break;
+        }
+
+        case "tcp": {
+          const url = new URL(header.target);
+
+          this.handleTcpRequestStream(stream, url.hostname, parseInt(url.port));
+          break;
+        }
+
+        default: {
+          logger.error("[PROXY] invalid stream target protocol %s", protocol);
+          stream.end();
+        }
+      }
+    } else {
+      this.handleDefaultRequestStream(stream);
+    }
+  }
+
+  handleTcpRequestStream(stream: Stream, host: string, port: number) {
+    const socket = net.createConnection(port, host, () => {
+      const parser = new StreamParser();
+
+      parser.bodyParser = (key: Buffer, iv: Buffer) => {
+        const decipher = createDecipheriv(this.cipherAlgorithm, key, iv);
+        const cipher = createCipheriv(this.cipherAlgorithm, key, iv);
+
+        parser.pipe(decipher).pipe(socket).pipe(cipher).pipe(stream);
+      };
+
+      parser.privateKey = this.keys?.private || "";
+
+      try {
+        stream.pipe(parser);
+      } catch (error) {
+        logger.error("[STREAM PARSER] failed to parse stream %s", error);
+        stream.end();
+      }
+    });
+
+    this.registerCommonSocketStreamEvents(socket, stream);
+  }
+
+  handleUnixRequestStream(stream: Stream, socketPath: string) {
+    const socket = net.createConnection(socketPath, () => {
+      const parser = new StreamParser();
+
+      parser.bodyParser = (key: Buffer, iv: Buffer) => {
+        const decipher = createDecipheriv(this.cipherAlgorithm, key, iv);
+        const cipher = createCipheriv(this.cipherAlgorithm, key, iv);
+
+        parser.pipe(decipher).pipe(socket).pipe(cipher).pipe(stream);
+      };
+
+      parser.privateKey = this.keys?.private || "";
+
+      try {
+        stream.pipe(parser);
+      } catch (error) {
+        logger.error("[STREAM PARSER] failed to parse stream %s", error);
+        stream.end();
+      }
+    });
+
+    this.registerCommonSocketStreamEvents(socket, stream);
+  }
+
+  protected registerCommonSocketStreamEvents(socket: net.Socket, stream: Stream) {
+    socket.on("timeout", () => {
+      socket.end();
+    });
+
+    socket.on("error", (error) => {
+      logger.error("[PROXY] tcp socket error: %o", error);
+      socket.end();
+    });
+
+    socket.on("end", () => {
+      stream.end();
+    });
+
+    stream.on("finish", () => {
+      logger.info("[PROXY] unix stream ended");
+      socket.end();
+    });
+  }
+
+  handleDefaultRequestStream(stream: Stream) {
     const opts: tls.ConnectionOptions = {
       host: process.env.KUBERNETES_HOST || "kubernetes.default.svc",
       port: parseInt(process.env.KUBERNETES_SERVICE_PORT || "443"),

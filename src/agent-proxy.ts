@@ -203,23 +203,7 @@ export class AgentProxy {
       }
     });
 
-    socket.on("timeout", () => {
-      socket.end();
-    });
-
-    socket.on("error", (error) => {
-      logger.error("[PROXY] tcp socket error: %o", error);
-      stream.end();
-    });
-
-    socket.on("end", () => {
-      stream.end();
-    });
-
-    stream.on("finish", () => {
-      logger.info("[PROXY] tcp stream ended");
-      socket.end();
-    });
+    this.registerCommonSocketStreamEvents(socket, stream);
   }
 
   handleUnixRequestStream(stream: Stream, socketPath: string) {
@@ -243,6 +227,10 @@ export class AgentProxy {
       }
     });
 
+    this.registerCommonSocketStreamEvents(socket, stream);
+  }
+
+  protected registerCommonSocketStreamEvents(socket: net.Socket, stream: Stream) {
     socket.on("timeout", () => {
       socket.end();
     });

@@ -156,8 +156,20 @@ export class AgentProxy {
 
   handleRequestStream(stream: Stream, data?: Buffer) {
     if (data) {
-      const header = JSON.parse(data.toString()) as StreamHeader;
-      const protocol = header.target.split("://")[0];
+      let protocol = "";
+      let header: StreamHeader;
+
+      try {
+        header = JSON.parse(data.toString()) as StreamHeader;
+
+        protocol = header?.target?.split("://")[0];
+      } catch (error) {
+        logger.error("[PROXY] invalid stream open data: %o", error);
+        stream.end();
+
+        return;
+      }
+
 
       switch(protocol) {
         case "unix": {
@@ -173,7 +185,7 @@ export class AgentProxy {
         }
 
         default: {
-          logger.error("invalid stream target protocol %s", protocol);
+          logger.error("[PROXY] invalid stream target protocol %s", protocol);
           stream.end();
         }
       }

@@ -161,7 +161,7 @@ export class AgentProxy {
 
       switch(protocol) {
         case "unix": {
-          this.handleUnixRequestStream(stream, header.target);
+          this.handleUnixRequestStream(stream, header.target.replace("unix://", ""));
           break;
         }
 
@@ -184,7 +184,23 @@ export class AgentProxy {
 
   handleTcpRequestStream(stream: Stream, host: string, port: number) {
     const socket = net.createConnection(port, host, () => {
-      stream.pipe(socket).pipe(stream);
+      const parser = new StreamParser();
+
+      parser.bodyParser = (key: Buffer, iv: Buffer) => {
+        const decipher = createDecipheriv(this.cipherAlgorithm, key, iv);
+        const cipher = createCipheriv(this.cipherAlgorithm, key, iv);
+
+        parser.pipe(decipher).pipe(socket).pipe(cipher).pipe(stream);
+      };
+
+      parser.privateKey = this.keys?.private || "";
+
+      try {
+        stream.pipe(parser);
+      } catch (error) {
+        logger.error("[STREAM PARSER] failed to parse stream %s", error);
+        stream.end();
+      }
     });
 
     socket.on("timeout", () => {
@@ -192,8 +208,8 @@ export class AgentProxy {
     });
 
     socket.on("error", (error) => {
-      logger.info("[PROXY] tcp socket error: ", error);
-      socket.end();
+      logger.error("[PROXY] tcp socket error: %o", error);
+      stream.end();
     });
 
     socket.on("end", () => {
@@ -208,7 +224,23 @@ export class AgentProxy {
 
   handleUnixRequestStream(stream: Stream, socketPath: string) {
     const socket = net.createConnection(socketPath, () => {
-      stream.pipe(socket).pipe(stream);
+      const parser = new StreamParser();
+
+      parser.bodyParser = (key: Buffer, iv: Buffer) => {
+        const decipher = createDecipheriv(this.cipherAlgorithm, key, iv);
+        const cipher = createCipheriv(this.cipherAlgorithm, key, iv);
+
+        parser.pipe(decipher).pipe(socket).pipe(cipher).pipe(stream);
+      };
+
+      parser.privateKey = this.keys?.private || "";
+
+      try {
+        stream.pipe(parser);
+      } catch (error) {
+        logger.error("[STREAM PARSER] failed to parse stream %s", error);
+        stream.end();
+      }
     });
 
     socket.on("timeout", () => {
@@ -216,7 +248,7 @@ export class AgentProxy {
     });
 
     socket.on("error", (error) => {
-      logger.info("[PROXY] unix socket error: ", error);
+      logger.error("[PROXY] tcp socket error: %o", error);
       socket.end();
     });
 
@@ -228,7 +260,7 @@ export class AgentProxy {
       logger.info("[PROXY] unix stream ended");
       socket.end();
     });
-  }  
+  }
 
   handleDefaultRequestStream(stream: Stream) {
     const opts: tls.ConnectionOptions = {

@@ -280,4 +280,30 @@ MwIDAQAB
     stream.write(`Type: application/json\r\nAuthorization: Bearer ${token}\r\n\r\n`);
     expect(destination.buffer.toString().includes("Impersonate-User")).toBe(false);
   });
+
+  it("rejects impersonate headers received from the client", async () => {
+    const stream = new PassThrough();
+    const parser = new StreamImpersonator();
+    const destination = new DummyWritable();
+
+    parser.boredServer = boredServer;
+    parser.saToken = "service-account-token";
+    parser.publicKey = jwtPublicKey;
+
+    const token = jwt.sign({
+      exp: Math.floor(Date.now() / 1000) + (60 * 60),
+      sub: "johndoe",
+      groups: ["dev", "ops"],
+      aud: [boredServer]
+    }, jwtPrivateKey, { algorithm: "RS256" });
+
+    const injectedHeader = `impErsonate-gRoup: admin`;
+
+    stream.pipe(parser).pipe(destination);
+    stream.write(`GET / HTTP/1.1\r\nAccept: application/json\r\nContent-`);
+    stream.write(`Type: application/json\r\n${injectedHeader}\r\n`);
+    expect(() => {
+      stream.write(`Authorization: Bearer ${token}\r\n\r\n`);
+    }).toThrowError("impersonate headers are not accepted");
+  });
 });

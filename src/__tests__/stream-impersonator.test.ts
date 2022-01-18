@@ -281,7 +281,11 @@ MwIDAQAB
     expect(destination.buffer.toString().includes("Impersonate-User")).toBe(false);
   });
 
-  it("rejects impersonate headers received from the client", async () => {
+  test.each([
+    "Impersonate-User: admin", "Impersonate-Group: admin",
+    "Impersonate-Uid: 123", "Impersonate-Extra-Foo: asdasd",
+    "imPersonate-uSer: admin"
+  ])("rejects impersonate header %p from the client", (injectedHeader) => {
     const stream = new PassThrough();
     const parser = new StreamImpersonator();
     const destination = new DummyWritable();
@@ -296,8 +300,6 @@ MwIDAQAB
       groups: ["dev", "ops"],
       aud: [boredServer]
     }, jwtPrivateKey, { algorithm: "RS256" });
-
-    const injectedHeader = `impErsonate-gRoup: admin`;
 
     stream.pipe(parser).pipe(destination);
     stream.write(`GET / HTTP/1.1\r\nAccept: application/json\r\nContent-`);

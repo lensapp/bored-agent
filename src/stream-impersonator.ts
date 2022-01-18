@@ -16,7 +16,6 @@ export class StreamImpersonator extends Transform {
   static authorizationSearch = "Authorization: Bearer ";
   static maxHeaderSize = 80 * 1024;
   static verbs = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"];
-  static rejectHeaders = ["impersonate-user", "impersonate-group"];
 
   public boredServer = "";
   public publicKey = "";
@@ -85,7 +84,7 @@ export class StreamImpersonator extends Transform {
     for (const line of headerLines) {
       const [key] = line.split(":", 1);
 
-      if (StreamImpersonator.rejectHeaders.includes(key.trim().toLowerCase())) {
+      if ((key.trim().toLowerCase().startsWith("impersonate-"))) {
         throw new Error(`impersonate headers are not accepted`);
       }
     }

@@ -16,6 +16,7 @@ export class StreamImpersonator extends Transform {
   static authorizationSearch = "Authorization: Bearer ";
   static maxHeaderSize = 80 * 1024;
   static verbs = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"];
+  static rejectHeaders = ["impersonate-user", "impersonate-group"];
 
   public boredServer = "";
   public publicKey = "";
@@ -62,7 +63,7 @@ export class StreamImpersonator extends Transform {
     if (!this.writableEnded) {
       if (jwtToken !== "") {
         this.validateRequestHeaders(headerBuffer);
-        
+
         this.headerChunks = [];
         const modifiedBuffer = this.impersonateJwtToken(headerBuffer, jwtToken);
         const newlineIndex = modifiedBuffer.lastIndexOf(StreamImpersonator.newlineBuffer);
@@ -78,14 +79,13 @@ export class StreamImpersonator extends Transform {
   }
 
   validateRequestHeaders(chunk: Buffer) {
-    const rejectHeaders = ["impersonate-user", "impersonate-group"];
     const headerBuffer = chunk.slice(0, chunk.indexOf(StreamImpersonator.bodySeparatorBuffer));
     const headerLines = headerBuffer.toString().split(StreamImpersonator.newlineBuffer.toString());
 
     for (const line of headerLines) {
       const [key] = line.split(":", 1);
 
-      if (rejectHeaders.includes(key.trim().toLowerCase())) {
+      if (StreamImpersonator.rejectHeaders.includes(key.trim().toLowerCase())) {
         throw new Error(`impersonate headers are not accepted`);
       }
     }

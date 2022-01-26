@@ -57,12 +57,17 @@ MwIDAQAB
 
   // for verify aud in jwt
   const boredServer = "http://bored:6666";
+  let stream: PassThrough;
+  let parser: StreamImpersonator;
+  let destination: DummyWritable;
+
+  beforeEach(() => {
+    stream = new PassThrough();
+    parser = new StreamImpersonator();
+    destination = new DummyWritable();
+  });
 
   it ("impersonates on valid jwt token", async () => {
-    const stream = new PassThrough();
-    const parser = new StreamImpersonator();
-    const destination = new DummyWritable();
-
     parser.boredServer = boredServer;
     parser.saToken = "service-account-token";
     parser.publicKey = jwtPublicKey;
@@ -80,10 +85,6 @@ MwIDAQAB
   });
 
   it ("impersonates groups on valid jwt token", async () => {
-    const stream = new PassThrough();
-    const parser = new StreamImpersonator();
-    const destination = new DummyWritable();
-
     parser.boredServer = boredServer;
     parser.saToken = "service-account-token";
     parser.publicKey = jwtPublicKey;
@@ -102,10 +103,6 @@ MwIDAQAB
   });
 
   it ("handles newline splitted to separate chunks", async () => {
-    const stream = new PassThrough();
-    const parser = new StreamImpersonator();
-    const destination = new DummyWritable();
-
     parser.boredServer = boredServer;
     parser.saToken = "service-account-token";
     parser.publicKey = jwtPublicKey;
@@ -123,10 +120,6 @@ MwIDAQAB
   });
 
   it ("handles http request pipelining", async () => {
-    const stream = new PassThrough();
-    const parser = new StreamImpersonator();
-    const destination = new DummyWritable();
-
     parser.boredServer = boredServer;
     parser.saToken = "service-account-token";
     parser.publicKey = jwtPublicKey;
@@ -138,23 +131,19 @@ MwIDAQAB
     }, jwtPrivateKey, { algorithm: "RS256" });
 
     stream.pipe(parser).pipe(destination);
-    stream.write(`POST /foo HTTP/1.1\r\nAccept: application/json\r\nContent-Type: application/json\r\nContent-Length: 3\r\nAuthorization: Bearer ${token}\r\n\r\nbar`);
+    stream.write(`GET /foo HTTP/1.1\r\nAccept: application/json\r\nContent-Type: application/json\r\nContent-Length: 3\r\nAuthorization: Bearer ${token}\r\n\r\n`);
     stream.write(`GET / HTTP/1.1\r\nAcce`);
     stream.write(`pt: application/json\r\nContent-T`);
     stream.write(`ype: application/json\r\nAuthorization: Bearer ${token}\r`);
     stream.write(`\n\r\n`);
     stream.write(`GET /version HTTP/1.1\r\nAccept: application/json\r\nContent-Type: application/json\r\nAuthorization: Bearer ${token}\r\n\r\n`);
-    stream.write(`POST /foo HTTP/1.1\r\nAccept: application/json\r\nContent-Type: application/json\r\nAuthorization: Bearer ${token}\r\n\r\nbar`);
+    stream.write(`GET /foo HTTP/1.1\r\nAccept: application/json\r\nContent-Type: application/json\r\nAuthorization: Bearer ${token}\r\n\r\n`);
     stream.write(`GET /foo HTTP/1.1\r\nAccept: application/json\r\nContent-Type: application/json\r\nAuthorization: Bearer ${token}\r\n\r\n`);
     expect(destination.buffer.toString()).toMatchSnapshot();
   });
 
 
   it ("handles body separator splitted to separate chunks", async () => {
-    const stream = new PassThrough();
-    const parser = new StreamImpersonator();
-    const destination = new DummyWritable();
-
     parser.boredServer = boredServer;
     parser.saToken = "service-account-token";
     parser.publicKey = jwtPublicKey;
@@ -174,10 +163,6 @@ MwIDAQAB
 
 
   it ("handles non GET requests", async () => {
-    const stream = new PassThrough();
-    const parser = new StreamImpersonator();
-    const destination = new DummyWritable();
-
     parser.boredServer = boredServer;
     parser.saToken = "service-account-token";
     parser.publicKey = jwtPublicKey;
@@ -197,10 +182,6 @@ MwIDAQAB
   });
 
   it ("handles port-forward upgrade", async () => {
-    const stream = new PassThrough();
-    const parser = new StreamImpersonator();
-    const destination = new DummyWritable();
-
     parser.boredServer = boredServer;
     parser.saToken = "service-account-token";
     parser.publicKey = jwtPublicKey;
@@ -224,10 +205,6 @@ MwIDAQAB
   });
 
   it("does not impersonate on invalid token", async () => {
-    const stream = new PassThrough();
-    const parser = new StreamImpersonator();
-    const destination = new DummyWritable();
-
     parser.saToken = "service-account-token";
     parser.publicKey = jwtPublicKey;
 
@@ -242,10 +219,6 @@ MwIDAQAB
   });
 
   it("does not impersonate if token.aud is mismatch", async () => {
-    const stream = new PassThrough();
-    const parser = new StreamImpersonator();
-    const destination = new DummyWritable();
-
     parser.boredServer = "aud_one";
     parser.saToken = "service-account-token";
     parser.publicKey = jwtPublicKey;
@@ -261,10 +234,6 @@ MwIDAQAB
   });
 
   it("does not impersonate if token is expired", async () => {
-    const stream = new PassThrough();
-    const parser = new StreamImpersonator();
-    const destination = new DummyWritable();
-
     parser.boredServer = "aud_one";
     parser.saToken = "service-account-token";
     parser.publicKey = jwtPublicKey;
@@ -286,10 +255,6 @@ MwIDAQAB
     "Impersonate-Uid: 123", "Impersonate-Extra-Foo: asdasd",
     "imPersonate-uSer: admin"
   ])("rejects impersonate header %p from the client", (injectedHeader) => {
-    const stream = new PassThrough();
-    const parser = new StreamImpersonator();
-    const destination = new DummyWritable();
-
     parser.boredServer = boredServer;
     parser.saToken = "service-account-token";
     parser.publicKey = jwtPublicKey;

@@ -21,14 +21,14 @@ Impersonate-User: johndoe
 `;
 
 exports[`StreamImpersonator handles http request pipelining 1`] = `
-"POST /foo HTTP/1.1
+"GET /foo HTTP/1.1
 Accept: application/json
 Content-Type: application/json
 Content-Length: 3
 Authorization: Bearer service-account-token
 Impersonate-User: johndoe
 
-barGET / HTTP/1.1
+GET / HTTP/1.1
 Accept: application/json
 Content-Type: application/json
 Authorization: Bearer service-account-token
@@ -40,13 +40,13 @@ Content-Type: application/json
 Authorization: Bearer service-account-token
 Impersonate-User: johndoe
 
-POST /foo HTTP/1.1
+GET /foo HTTP/1.1
 Accept: application/json
 Content-Type: application/json
 Authorization: Bearer service-account-token
 Impersonate-User: johndoe
 
-barGET /foo HTTP/1.1
+GET /foo HTTP/1.1
 Accept: application/json
 Content-Type: application/json
 Authorization: Bearer service-account-token

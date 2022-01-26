@@ -1,6 +1,7 @@
 import { Transform, TransformCallback } from "stream";
 import * as jwt from "jsonwebtoken";
 import logger from "./logger";
+import { bodySeparatorBuffer, newlineBuffer, parseHeader, parseTokenFromHttpHeaders } from "./parse-header";
 
 type TokenPayload = {
   exp: number;
@@ -10,29 +11,48 @@ type TokenPayload = {
 };
 
 export class StreamImpersonator extends Transform {
-  static newlineBuffer = Buffer.from("\r\n");
-  static bodySeparatorBuffer = Buffer.from("\r\n\r\n");
-  static connectionUpgradeBuffer = Buffer.from("Connection: Upgrade");
-  static authorizationSearch = "Authorization: Bearer ";
+  static requestRegex = /^([A-Z-]+) ([^ ]+) HTTP\/(\d)\.(\d)$/m;
+  static connectionUpgradeBuffer = Buffer.from("\r\nConnection: Upgrade\r\n");
   static maxHeaderSize = 80 * 1024;
-  static verbs = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"];
+  static pipelineableVerbs = ["GET", "OPTIONS", "HEAD"];
+  static verbs = [...StreamImpersonator.pipelineableVerbs, "POST", "PUT", "PATCH", "DELETE"];
 
   public boredServer = "";
   public publicKey = "";
   public saToken = "";
+  private httpHeadersStarted = false;
   private httpHeadersEnded = false;
   private headerChunks: Buffer[] = [];
-  private httpHeadersStarted = false;
+  private connectionUpgrade = false;
+  private pipelineable = false;
 
   _transform(chunk: Buffer, encoding: BufferEncoding, callback: TransformCallback): void {
-    if (!this.httpHeadersStarted && StreamImpersonator.verbs.includes(chunk.slice(0, chunk.indexOf(" ")).toString())) {
+    if (!this.httpHeadersStarted && !this.connectionUpgrade) {
+      const match = StreamImpersonator.requestRegex.exec(chunk.toString());
+
+      if (!match) {
+        throw new Error("Invalid request");
+      }
+
+      if (!StreamImpersonator.verbs.includes(match[1])) {
+        throw new Error("Invalid request method");
+      }
+
+      if (StreamImpersonator.pipelineableVerbs.includes(match[1])) {
+        this.pipelineable = true;
+      }
+
       this.httpHeadersStarted = true;
       this.httpHeadersEnded = false;
     }
 
-    if (this.httpHeadersEnded) {
+    if (this.httpHeadersEnded || this.connectionUpgrade) {
       if (!this.writableEnded) {
-        this.push(Buffer.concat(this.headerChunks));
+        if (this.headerChunks.length > 0) {
+          this.push(Buffer.concat(this.headerChunks));
+          this.headerChunks = [];
+        }
+
         this.push(chunk);
       }
 
@@ -43,69 +63,57 @@ export class StreamImpersonator extends Transform {
 
     const headerBuffer = Buffer.concat(this.headerChunks);
 
-    if (this.httpHeadersStarted && headerBuffer.byteLength > StreamImpersonator.maxHeaderSize) {
-      throw new Error("Too many header bytes seen; overflow detected");
+    if (!this.httpHeadersEnded) {
+      if (headerBuffer.byteLength > StreamImpersonator.maxHeaderSize) {
+        throw new Error("Too many header bytes seen; overflow detected");
+      }
+
+      if (headerBuffer.indexOf(bodySeparatorBuffer) === -1) {
+        return callback();
+      } else {
+        this.httpHeadersStarted = !this.pipelineable;
+        this.httpHeadersEnded = true;
+      }
     }
 
-    if (this.httpHeadersStarted && headerBuffer.indexOf(StreamImpersonator.bodySeparatorBuffer) === -1) {
+    if (headerBuffer.indexOf(StreamImpersonator.connectionUpgradeBuffer) !== -1) {
+      this.connectionUpgrade = true;
+    }
+
+    if (this.writableEnded) {
       return callback();
     }
 
-    this.httpHeadersEnded = true;
+    const jwtToken = parseTokenFromHttpHeaders(headerBuffer);
 
-    if (headerBuffer.indexOf(StreamImpersonator.connectionUpgradeBuffer) === -1) {
-      this.httpHeadersStarted = false;
-    }
+    this.headerChunks = [];
 
-    const jwtToken = this.parseTokenFromHttpHeaders(headerBuffer);
+    if (jwtToken) {
+      this.validateRequestHeaders(headerBuffer);
 
-    if (!this.writableEnded) {
-      if (jwtToken !== "") {
-        this.validateRequestHeaders(headerBuffer);
+      const modifiedBuffer = this.impersonateJwtToken(headerBuffer, jwtToken);
+      const newlineIndex = modifiedBuffer.lastIndexOf(newlineBuffer);
 
-        this.headerChunks = [];
-        const modifiedBuffer = this.impersonateJwtToken(headerBuffer, jwtToken);
-        const newlineIndex = modifiedBuffer.lastIndexOf(StreamImpersonator.newlineBuffer);
-
-        this.push(modifiedBuffer.slice(0, newlineIndex + 4));
-        this.headerChunks.push(modifiedBuffer.slice(newlineIndex + 4));
-      } else {
-        this.push(chunk);
-      }
+      this.push(modifiedBuffer.slice(0, newlineIndex + 4));
+      this.headerChunks.push(modifiedBuffer.slice(newlineIndex + 4));
+    } else {
+      this.push(headerBuffer);
     }
 
     return callback();
   }
 
   validateRequestHeaders(chunk: Buffer) {
-    const headerBuffer = chunk.slice(0, chunk.indexOf(StreamImpersonator.bodySeparatorBuffer));
-    const headerLines = headerBuffer.toString().split(StreamImpersonator.newlineBuffer.toString());
+    const headerBuffer = chunk.slice(0, chunk.indexOf(bodySeparatorBuffer));
+    const headerLines = headerBuffer.toString().split(newlineBuffer.toString());
 
     for (const line of headerLines) {
-      const [key] = line.split(":", 1);
+      const [key] = parseHeader(line);
 
-      if ((key.trim().toLowerCase().startsWith("impersonate-"))) {
+      if (key && key.trim().toLowerCase().startsWith("impersonate-")) {
         throw new Error(`impersonate headers are not accepted`);
       }
     }
-  }
-
-  parseTokenFromHttpHeaders(chunk: Buffer) {
-    const search = StreamImpersonator.authorizationSearch;
-    const index = chunk.indexOf(search);
-
-    if (index === -1) {
-      return "";
-    }
-
-    const tokenBuffer = chunk.slice(index);
-    const newLineIndex = tokenBuffer.indexOf(StreamImpersonator.newlineBuffer);
-
-    if (newLineIndex === -1) {
-      return "";
-    }
-
-    return tokenBuffer.slice(search.length, newLineIndex).toString();
   }
 
   impersonateJwtToken(chunk: Buffer, token: string) {
@@ -114,12 +122,12 @@ export class StreamImpersonator extends Transform {
         algorithms: ["RS256", "RS384", "RS512"],
         audience: [this.boredServer]
       }) as TokenPayload;
-      const impersonatedHeaders: Buffer[] = [Buffer.from(this.saToken), StreamImpersonator.newlineBuffer];
+      const impersonatedHeaders: Buffer[] = [Buffer.from(this.saToken), newlineBuffer];
 
       logger.info(`[IMPERSONATOR] impersonating user ${tokenData.sub}`);
       impersonatedHeaders.push(Buffer.from(`Impersonate-User: ${tokenData.sub}`));
       tokenData?.groups?.forEach((group) => {
-        impersonatedHeaders.push(StreamImpersonator.newlineBuffer);
+        impersonatedHeaders.push(newlineBuffer);
         impersonatedHeaders.push(Buffer.from(`Impersonate-Group: ${group}`));
       });
 

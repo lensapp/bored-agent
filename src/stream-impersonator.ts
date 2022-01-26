@@ -110,7 +110,7 @@ export class StreamImpersonator extends Transform {
     for (const line of headerLines) {
       const [key] = parseHeader(line);
 
-      if (key && key.trim().toLowerCase().startsWith("impersonate-")) {
+      if (key?.trim().toLowerCase().startsWith("impersonate-")) {
         throw new Error(`impersonate headers are not accepted`);
       }
     }

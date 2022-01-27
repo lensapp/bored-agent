@@ -121,6 +121,25 @@ MwIDAQAB
     expect(destination.buffer.toString().includes(`\r\nAuthorization: Bearer ${token} trailing-data\r\n`));
   });
 
+  it ("does not remove crlf+whitespace from body", async () => {
+    parser.boredServer = boredServer;
+    parser.saToken = "service-account-token";
+    parser.publicKey = jwtPublicKey;
+
+    const token = jwt.sign({
+      exp: Math.floor(Date.now() / 1000) + (60 * 60),
+      sub: "johndoe",
+      groups: ["dev", "ops"],
+      aud: [boredServer]
+    }, jwtPrivateKey, { algorithm: "RS256" });
+
+    stream.pipe(parser).pipe(destination);
+    stream.write(`GET / HTTP/1.1\r\nAccept: application/json\r\nContent-`);
+    stream.write(`Type: application/json\r\nAuthorization: Bearer ${token}\r\n trailing-data\r\nCache-Control: max-age=0\r\n\r\nfoo\r\n bar`);
+
+    expect(destination.buffer.toString().includes(`\r\n\r\nfoo\r\n bar`));
+  });
+
   it ("handles newline splitted to separate chunks", async () => {
     parser.boredServer = boredServer;
     parser.saToken = "service-account-token";

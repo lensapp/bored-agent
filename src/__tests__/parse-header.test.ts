@@ -1,4 +1,4 @@
-import { parseHeader, parseTokenFromHttpHeaders } from "../parse-header";
+import { parseHeader, parseTokenFromHttpHeaders, sanitizeHeaders } from "../parse-header";
 
 describe("parseHeader", () => {
   it("parses header from a string", () => {
@@ -61,5 +61,20 @@ describe("parseTokenFromHttpHeaders", () => {
     const token = parseTokenFromHttpHeaders(Buffer.from(`GET / HTTP/1.1\r\nAccept: application/json\r\nHost: localhost\r\n\r\n`));
 
     expect(token).toBeUndefined();
+  });
+});
+
+describe("sanitizeHeaders", () => {
+  it("does not touch sane headers", () => {
+    const headers = Buffer.from(`GET / HTTP/1.1\r\nAccept: application/json\r\nHost: localhost\r\n\r\n`);
+
+    expect(sanitizeHeaders(headers)).toEqual(headers);
+  });
+
+  it("sanitizes authorization header with crlf+whitespace+trailing-data", () => {
+    const headers = Buffer.from(`GET / HTTP/1.1\r\nAccept: application/json\r\nAuthorization: Bearer token\r\n malicious data\r\nHost: localhost\r\n\r\n`);
+    const expectedHeaders = Buffer.from(`GET / HTTP/1.1\r\nAccept: application/json\r\nAuthorization: Bearer token malicious data\r\nHost: localhost\r\n\r\n`);
+
+    expect(sanitizeHeaders(headers)).toEqual(expectedHeaders);
   });
 });

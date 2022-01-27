@@ -1,7 +1,10 @@
 import { Transform, TransformCallback } from "stream";
 import * as jwt from "jsonwebtoken";
 import logger from "./logger";
-import { bodySeparatorBuffer, newlineBuffer, parseHeader, parseTokenFromHttpHeaders } from "./parse-header";
+import {
+  bodySeparatorBuffer, newlineBuffer, parseHeader,
+  parseTokenFromHttpHeaders, sanitizeHeaders
+} from "./parse-header";
 
 type TokenPayload = {
   exp: number;
@@ -61,18 +64,25 @@ export class StreamImpersonator extends Transform {
 
     this.headerChunks.push(chunk);
 
-    const headerBuffer = Buffer.concat(this.headerChunks);
+    let headerBuffer = Buffer.concat(this.headerChunks);
 
     if (!this.httpHeadersEnded) {
       if (headerBuffer.byteLength > StreamImpersonator.maxHeaderSize) {
         throw new Error("Too many header bytes seen; overflow detected");
       }
 
-      if (headerBuffer.indexOf(bodySeparatorBuffer) === -1) {
+      const bodySeparatorIndex = headerBuffer.indexOf(bodySeparatorBuffer);
+
+      if (bodySeparatorIndex === -1) {
         return callback();
       } else {
         this.httpHeadersStarted = !this.pipelineable;
         this.httpHeadersEnded = true;
+
+        this.headerChunks = [];
+        this.headerChunks.push(headerBuffer.slice(bodySeparatorIndex + 4));
+        headerBuffer = sanitizeHeaders(headerBuffer.slice(0, bodySeparatorIndex + 4));
+        this.validateRequestHeaders(headerBuffer);
       }
     }
 
@@ -86,18 +96,17 @@ export class StreamImpersonator extends Transform {
 
     const jwtToken = parseTokenFromHttpHeaders(headerBuffer);
 
-    this.headerChunks = [];
-
     if (jwtToken) {
-      this.validateRequestHeaders(headerBuffer);
-
       const modifiedBuffer = this.impersonateJwtToken(headerBuffer, jwtToken);
-      const newlineIndex = modifiedBuffer.lastIndexOf(newlineBuffer);
 
-      this.push(modifiedBuffer.slice(0, newlineIndex + 4));
-      this.headerChunks.push(modifiedBuffer.slice(newlineIndex + 4));
+      this.push(modifiedBuffer);
     } else {
       this.push(headerBuffer);
+    }
+
+    if (this.headerChunks.length > 0) {
+      this.push(Buffer.concat(this.headerChunks));
+      this.headerChunks = [];
     }
 
     return callback();

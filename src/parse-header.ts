@@ -1,5 +1,6 @@
 const headerRegex = /^([^: \t]+):[ \t]*((?:.*[^ \t])|)/;
 const tokenSearch = /^authorization:\s*bearer\s+(.+)$/im;
+const crlfWhitespace = "\r\n ";
 
 export const bodySeparatorBuffer = Buffer.from("\r\n\r\n");
 export const newlineBuffer = Buffer.from("\r\n");
@@ -27,4 +28,11 @@ export function parseTokenFromHttpHeaders(chunk: Buffer) {
   }
 
   return match[1];
+}
+
+export function sanitizeHeaders(headerBuffer: Buffer) {
+  const headers = headerBuffer.toString();
+  const sanitizedHeaders = headers.replaceAll(crlfWhitespace, " ");
+
+  return Buffer.from(sanitizedHeaders);
 }

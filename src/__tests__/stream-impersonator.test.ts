@@ -169,7 +169,7 @@ MwIDAQAB
     }, jwtPrivateKey, { algorithm: "RS256" });
 
     stream.pipe(parser).pipe(destination);
-    stream.write(`GET /foo HTTP/1.1\r\nAccept: application/json\r\nContent-Type: application/json\r\nContent-Length: 3\r\nAuthorization: Bearer ${token}\r\n\r\n`);
+    stream.write(`GET /foo HTTP/1.1\r\nAccept: application/json\r\nContent-Type: application/json\r\nAuthorization: Bearer ${token}\r\n\r\n`);
     stream.write(`GET / HTTP/1.1\r\nAcce`);
     stream.write(`pt: application/json\r\nContent-T`);
     stream.write(`ype: application/json\r\nAuthorization: Bearer ${token}\r`);
@@ -200,7 +200,7 @@ MwIDAQAB
   });
 
 
-  it ("handles non GET requests", async () => {
+  it ("handles non GET pipelined requests", async () => {
     parser.boredServer = boredServer;
     parser.saToken = "service-account-token";
     parser.publicKey = jwtPublicKey;
@@ -212,10 +212,26 @@ MwIDAQAB
     }, jwtPrivateKey, { algorithm: "RS256" });
 
     stream.pipe(parser).pipe(destination);
-    stream.write(`POST /apis/authorization.k8s.io/v1/selfsubjectaccessreviews HTTP/1.1\r\nAccept: application/json\r\nContent-Type:`);
-    stream.write(` application/json\r\nContent-Length: 324\r\nAuthorization: Bearer ${token}\r\n\r`);
-    stream.write(`\n{"apiVersion":"authorization.k8s.io/v1","kind":"SelfSubjectAccess`);
-    stream.write(`Review","spec":{"resourceAttributes":{"namespace":"kube-system","resource":"*","verb":"create"}}}{"apiVersion":"authorization.k8s.io/v1","kind":"SelfSubjectAccessReview","spec":{"resourceAttributes":{"namespace":"kube-system","resource":"*","verb":"create"}}}`);
+    stream.write(`GET /version HTTP/1.1\r\n`);
+    stream.write(`Host: 127.0.0.1:54642\r\n`);
+    stream.write(`User-Agent: kubectl/v1.21.2 (darwin/amd64) kubernetes/092fbfb\r\n`);
+    stream.write(`Accept: application/json\r\n`);
+    stream.write(`Authorization: Bearer ${token}\r\n`);
+    stream.write(`Content-Type: application/json\r\n`);
+    stream.write(`X-Forwarded-For: 127.0.0.1\r\n`);
+    stream.write(`Accept-Encoding: gzip\r\n\r\n`);
+
+    stream.write(`POST /apis/authorization.k8s.io/v1/selfsubjectaccessreviews HTTP/1.1\r\n`);
+    stream.write(`Host: 127.0.0.1:54642\r\n`);
+    stream.write(`User-Agent: kubectl/v1.21.2 (darwin/amd64) kubernetes/092fbfb\r\n`);
+    stream.write(`Content-Length: 162\r\n`);
+    stream.write(`Accept: application/json\r\n`);
+    stream.write(`Authorization: Bearer ${token}\r\n`);
+    stream.write(`Content-Type: application/json\r\n`);
+    stream.write(`X-Forwarded-For: 127.0.0.1\r\n`);
+    stream.write(`Accept-Encoding: gzip\r\n\r\n`);
+    stream.write(`{"apiVersion":"authorization.k8s.io/v1","kind":"SelfSubjectAccessReview","spec":{"resourceAttributes":{"namespace":"kube-system","resource":"*","verb":"create"}}}`);
+
     expect(destination.buffer.toString()).toMatchSnapshot();
   });
 
@@ -235,7 +251,7 @@ MwIDAQAB
     const thirdPartyToken = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c`;
 
     stream.write(`POST /apis/authorization.k8s.io/v1/selfsubjectaccessreviews HTTP/1.1\r\nAccept: application/json\r\nContent-Type:`);
-    stream.write(` application/json\r\nContent-Length: 0\r\nConnection: Upgrade\r\nAuthorization: Bearer ${token}\r\n\r\n`);
+    stream.write(` application/json\r\nConnection: Upgrade\r\nAuthorization: Bearer ${token}\r\n\r\n`);
     stream.write(`GET /version HTTP/1.1\r\nAccept: application/json\r\nContent-Type: application/json\r\nAuthorization: Bearer ${thirdPartyToken}\r\n\r\n`);
     stream.write(`POST /foo HTTP/1.1\r\nAccept: application/json\r\nContent-Type: application/json\r\nAuthorization: Bearer ${thirdPartyToken}\r\n\r\nbar`);
     stream.write(`GET /foo HTTP/1.1\r\nAccept: application/json\r\nContent-Type: application/json\r\nAuthorization: Bearer ${thirdPartyToken}\r\n\r\n`);

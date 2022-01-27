@@ -15,6 +15,7 @@
   "devDependencies": {
     "@types/jest": "^27.0.2",
     "@types/jsonwebtoken": "^8.5.5",
+    "@types/lodash": "^4.14.178",
     "@types/node": "^16.11.6",
     "@types/pino": "^6.3.11",
     "@types/ws": "^7.4.7",
@@ -31,10 +32,12 @@
     "@kubernetes/client-node": "^0.15.1",
     "bored-mplex": "^0.0.20",
     "got": "^11.8.2",
+    "http-parser-js": "^0.5.5",
     "https-proxy-agent": "^5.0.0",
     "jsonwebtoken": "^8.5.1",
+    "lodash": "^4.17.21",
     "pino": "^6.13.2",
-    "pino-pretty": "^4.7.1",
+    "pino-pretty": "^7.5.0",
     "ws": "^7.4.6"
   }
 }

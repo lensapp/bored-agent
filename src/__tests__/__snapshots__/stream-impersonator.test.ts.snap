@@ -2,88 +2,100 @@
 
 exports[`StreamImpersonator does not impersonate on invalid token 1`] = `
 "POST / HTTP/1.1
-Accept: application/json
-Authorization: Bearer invalid.token.is
-Content-Type: application/json
-Content-Length: 11
+accept: application/json
+authorization: Bearer invalid.token.is
+content-type: application/json
+content-length: 11
 
 hello world"
 `;
 
 exports[`StreamImpersonator handles body separator splitted to separate chunks 1`] = `
 "GET / HTTP/1.1
-Accept: application/json
-Content-Type: application/json
-Authorization: Bearer service-account-token
-Impersonate-User: johndoe
+accept: application/json
+content-type: application/json
+authorization: Bearer service-account-token
+impersonate-user: johndoe
 
 "
 `;
 
 exports[`StreamImpersonator handles http request pipelining 1`] = `
 "GET /foo HTTP/1.1
-Accept: application/json
-Content-Type: application/json
-Content-Length: 3
-Authorization: Bearer service-account-token
-Impersonate-User: johndoe
+accept: application/json
+content-type: application/json
+authorization: Bearer service-account-token
+impersonate-user: johndoe
 
 GET / HTTP/1.1
-Accept: application/json
-Content-Type: application/json
-Authorization: Bearer service-account-token
-Impersonate-User: johndoe
+accept: application/json
+content-type: application/json
+authorization: Bearer service-account-token
+impersonate-user: johndoe
 
 GET /version HTTP/1.1
-Accept: application/json
-Content-Type: application/json
-Authorization: Bearer service-account-token
-Impersonate-User: johndoe
+accept: application/json
+content-type: application/json
+authorization: Bearer service-account-token
+impersonate-user: johndoe
 
 GET /foo HTTP/1.1
-Accept: application/json
-Content-Type: application/json
-Authorization: Bearer service-account-token
-Impersonate-User: johndoe
+accept: application/json
+content-type: application/json
+authorization: Bearer service-account-token
+impersonate-user: johndoe
 
 GET /foo HTTP/1.1
-Accept: application/json
-Content-Type: application/json
-Authorization: Bearer service-account-token
-Impersonate-User: johndoe
+accept: application/json
+content-type: application/json
+authorization: Bearer service-account-token
+impersonate-user: johndoe
 
 "
 `;
 
 exports[`StreamImpersonator handles newline splitted to separate chunks 1`] = `
 "GET / HTTP/1.1
-Accept: application/json
-Content-Type: application/json
-Authorization: Bearer service-account-token
-Impersonate-User: johndoe
+accept: application/json
+content-type: application/json
+authorization: Bearer service-account-token
+impersonate-user: johndoe
 
 "
 `;
 
-exports[`StreamImpersonator handles non GET requests 1`] = `
-"POST /apis/authorization.k8s.io/v1/selfsubjectaccessreviews HTTP/1.1
-Accept: application/json
-Content-Type: application/json
-Content-Length: 324
-Authorization: Bearer service-account-token
-Impersonate-User: johndoe
+exports[`StreamImpersonator handles non GET pipelined requests 1`] = `
+"GET /version HTTP/1.1
+host: 127.0.0.1:54642
+user-agent: kubectl/v1.21.2 (darwin/amd64) kubernetes/092fbfb
+accept: application/json
+content-type: application/json
+x-forwarded-for: 127.0.0.1
+accept-encoding: gzip
+authorization: Bearer service-account-token
+impersonate-user: johndoe
 
-{\\"apiVersion\\":\\"authorization.k8s.io/v1\\",\\"kind\\":\\"SelfSubjectAccessReview\\",\\"spec\\":{\\"resourceAttributes\\":{\\"namespace\\":\\"kube-system\\",\\"resource\\":\\"*\\",\\"verb\\":\\"create\\"}}}{\\"apiVersion\\":\\"authorization.k8s.io/v1\\",\\"kind\\":\\"SelfSubjectAccessReview\\",\\"spec\\":{\\"resourceAttributes\\":{\\"namespace\\":\\"kube-system\\",\\"resource\\":\\"*\\",\\"verb\\":\\"create\\"}}}"
+POST /apis/authorization.k8s.io/v1/selfsubjectaccessreviews HTTP/1.1
+host: 127.0.0.1:54642
+user-agent: kubectl/v1.21.2 (darwin/amd64) kubernetes/092fbfb
+content-length: 162
+accept: application/json
+content-type: application/json
+x-forwarded-for: 127.0.0.1
+accept-encoding: gzip
+authorization: Bearer service-account-token
+impersonate-user: johndoe
+
+{\\"apiVersion\\":\\"authorization.k8s.io/v1\\",\\"kind\\":\\"SelfSubjectAccessReview\\",\\"spec\\":{\\"resourceAttributes\\":{\\"namespace\\":\\"kube-system\\",\\"resource\\":\\"*\\",\\"verb\\":\\"create\\"}}}"
 `;
 
 exports[`StreamImpersonator handles port-forward upgrade 1`] = `
 "POST /apis/authorization.k8s.io/v1/selfsubjectaccessreviews HTTP/1.1
-Accept: application/json
-Content-Type: application/json
-Content-Length: 0
-Connection: Upgrade
-Authorization: Bearer service-account-token
-Impersonate-User: johndoe
+accept: application/json
+content-type: application/json
+connection: Upgrade
+authorization: Bearer service-account-token
+impersonate-user: johndoe
 
 GET /version HTTP/1.1
 Accept: application/json
@@ -105,22 +117,22 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3O
 
 exports[`StreamImpersonator impersonates groups on valid jwt token 1`] = `
 "GET / HTTP/1.1
-Accept: application/json
-Content-Type: application/json
-Authorization: Bearer service-account-token
-Impersonate-User: johndoe
-Impersonate-Group: dev
-Impersonate-Group: ops
+accept: application/json
+content-type: application/json
+authorization: Bearer service-account-token
+impersonate-user: johndoe
+impersonate-group: dev
+impersonate-group: ops
 
 "
 `;
 
 exports[`StreamImpersonator impersonates on valid jwt token 1`] = `
 "GET / HTTP/1.1
-Accept: application/json
-Content-Type: application/json
-Authorization: Bearer service-account-token
-Impersonate-User: johndoe
+accept: application/json
+content-type: application/json
+authorization: Bearer service-account-token
+impersonate-user: johndoe
 
 "
 `;

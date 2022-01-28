@@ -19,7 +19,6 @@ export class StreamImpersonator extends Transform {
   public saToken = "";
   private chunks: Buffer[] = [];
   private httpParser: HTTPParserJS;
-  private parseError?: any;
   private upgrade = false;
 
   constructor() {
@@ -77,10 +76,9 @@ export class StreamImpersonator extends Transform {
     this.chunks = [];
   }
 
-  _flush(callback: TransformCallback): void {
+  _final(callback: TransformCallback): void {
     this.flushChunks();
-
-    callback(this.parseError);
+    callback();
   }
 
   _transform(chunk: Buffer, encoding: BufferEncoding, callback: TransformCallback): void {

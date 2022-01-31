@@ -751,10 +751,10 @@
   resolved "https://registry.yarnpkg.com/@types/json-schema/-/json-schema-7.0.8.tgz#edf1bf1dbf4e04413ca8e5b17b3b7d7d54b59818"
   integrity sha512-YSBPTLTVm2e2OoQIDYx8HaeWJ5tTToLH67kXR7zYNGupXMEHa2++G8k+DczX2cFVgalypqtyZIcU19AFcmOpmg==
 
-"@types/jsonwebtoken@^8.5.5":
-  version "8.5.5"
-  resolved "https://registry.yarnpkg.com/@types/jsonwebtoken/-/jsonwebtoken-8.5.5.tgz#da5f2f4baee88f052ef3e4db4c1a0afb46cff22c"
-  integrity sha512-OGqtHQ7N5/Ap/TUwO6IgHDuLiAoTmHhGpNvgkCm/F4N6pKzx/RBSfr2OXZSwC6vkfnsEdb6+7DNZVtiXiwdwFw==
+"@types/jsonwebtoken@^8.5.8":
+  version "8.5.8"
+  resolved "https://registry.yarnpkg.com/@types/jsonwebtoken/-/jsonwebtoken-8.5.8.tgz#01b39711eb844777b7af1d1f2b4cf22fda1c0c44"
+  integrity sha512-zm6xBQpFDIDM6o9r6HSgDeIcLy82TKWctCXEPbJJcXb5AKmi5BNNdLXneixK4lplX3PqIVcwLBCGE/kAGnlD4A==
   dependencies:
     "@types/node" "*"
 
@@ -1314,10 +1314,10 @@ bcrypt-pbkdf@^1.0.0:
   dependencies:
     tweetnacl "^0.14.3"
 
-bored-mplex@^0.0.20:
-  version "0.0.20"
-  resolved "https://registry.yarnpkg.com/bored-mplex/-/bored-mplex-0.0.20.tgz#8f64ad23d605751a1ca2ff3e07d5e808c27962ef"
-  integrity sha512-1kzzE6qe8ugO8RVswgzZue28YtZBMlpY/J0XICQmYr/h0RxIn76ZtMVWDF0drVfdISyw49nFqphQ2v5DagpKIA==
+bored-mplex@^0.0.21:
+  version "0.0.21"
+  resolved "https://registry.yarnpkg.com/bored-mplex/-/bored-mplex-0.0.21.tgz#bb66da720eaca75a27035edf19f3fe8277b3cf78"
+  integrity sha512-d17TMIRBkwyDvW9kUOiZRP//GiUiqle2QD3pa75dMLLavr6PtkWBzI6dEh0EA6MnJNMawFPgW/M1KCaSHxbJNg==
   dependencies:
     msgpackr "1.2.9"
 

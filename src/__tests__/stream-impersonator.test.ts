@@ -57,12 +57,17 @@ MwIDAQAB
 
   // for verify aud in jwt
   const boredServer = "http://bored:6666";
+  let stream: PassThrough;
+  let parser: StreamImpersonator;
+  let destination: DummyWritable;
+
+  beforeEach(() => {
+    stream = new PassThrough();
+    parser = new StreamImpersonator();
+    destination = new DummyWritable();
+  });
 
   it ("impersonates on valid jwt token", async () => {
-    const stream = new PassThrough();
-    const parser = new StreamImpersonator();
-    const destination = new DummyWritable();
-
     parser.boredServer = boredServer;
     parser.saToken = "service-account-token";
     parser.publicKey = jwtPublicKey;
@@ -80,10 +85,6 @@ MwIDAQAB
   });
 
   it ("impersonates groups on valid jwt token", async () => {
-    const stream = new PassThrough();
-    const parser = new StreamImpersonator();
-    const destination = new DummyWritable();
-
     parser.boredServer = boredServer;
     parser.saToken = "service-account-token";
     parser.publicKey = jwtPublicKey;
@@ -101,11 +102,45 @@ MwIDAQAB
     expect(destination.buffer.toString()).toMatchSnapshot();
   });
 
-  it ("handles newline splitted to separate chunks", async () => {
-    const stream = new PassThrough();
-    const parser = new StreamImpersonator();
-    const destination = new DummyWritable();
+  it ("skips impersonation if tokens contains crlf-whitespace with trailing data", async () => {
+    parser.boredServer = boredServer;
+    parser.saToken = "service-account-token";
+    parser.publicKey = jwtPublicKey;
 
+    const token = jwt.sign({
+      exp: Math.floor(Date.now() / 1000) + (60 * 60),
+      sub: "johndoe",
+      groups: ["dev", "ops"],
+      aud: [boredServer]
+    }, jwtPrivateKey, { algorithm: "RS256" });
+
+    stream.pipe(parser).pipe(destination);
+    stream.write(`GET / HTTP/1.1\r\nAccept: application/json\r\nContent-`);
+    stream.write(`Type: application/json\r\nAuthorization: Bearer ${token}\r\n trailing-data\r\nCache-Control: max-age=0\r\n\r\n`);
+
+    expect(destination.buffer.toString().includes(`\r\nAuthorization: Bearer ${token} trailing-data\r\n`));
+  });
+
+  it ("does not remove crlf+whitespace from body", async () => {
+    parser.boredServer = boredServer;
+    parser.saToken = "service-account-token";
+    parser.publicKey = jwtPublicKey;
+
+    const token = jwt.sign({
+      exp: Math.floor(Date.now() / 1000) + (60 * 60),
+      sub: "johndoe",
+      groups: ["dev", "ops"],
+      aud: [boredServer]
+    }, jwtPrivateKey, { algorithm: "RS256" });
+
+    stream.pipe(parser).pipe(destination);
+    stream.write(`GET / HTTP/1.1\r\nAccept: application/json\r\nContent-`);
+    stream.write(`Type: application/json\r\nAuthorization: Bearer ${token}\r\n trailing-data\r\nCache-Control: max-age=0\r\n\r\nfoo\r\n bar`);
+
+    expect(destination.buffer.toString().includes(`\r\n\r\nfoo\r\n bar`));
+  });
+
+  it ("handles newline splitted to separate chunks", async () => {
     parser.boredServer = boredServer;
     parser.saToken = "service-account-token";
     parser.publicKey = jwtPublicKey;
@@ -123,10 +158,6 @@ MwIDAQAB
   });
 
   it ("handles http request pipelining", async () => {
-    const stream = new PassThrough();
-    const parser = new StreamImpersonator();
-    const destination = new DummyWritable();
-
     parser.boredServer = boredServer;
     parser.saToken = "service-account-token";
     parser.publicKey = jwtPublicKey;
@@ -138,23 +169,19 @@ MwIDAQAB
     }, jwtPrivateKey, { algorithm: "RS256" });
 
     stream.pipe(parser).pipe(destination);
-    stream.write(`POST /foo HTTP/1.1\r\nAccept: application/json\r\nContent-Type: application/json\r\nContent-Length: 3\r\nAuthorization: Bearer ${token}\r\n\r\nbar`);
+    stream.write(`GET /foo HTTP/1.1\r\nAccept: application/json\r\nContent-Type: application/json\r\nAuthorization: Bearer ${token}\r\n\r\n`);
     stream.write(`GET / HTTP/1.1\r\nAcce`);
     stream.write(`pt: application/json\r\nContent-T`);
     stream.write(`ype: application/json\r\nAuthorization: Bearer ${token}\r`);
     stream.write(`\n\r\n`);
     stream.write(`GET /version HTTP/1.1\r\nAccept: application/json\r\nContent-Type: application/json\r\nAuthorization: Bearer ${token}\r\n\r\n`);
-    stream.write(`POST /foo HTTP/1.1\r\nAccept: application/json\r\nContent-Type: application/json\r\nAuthorization: Bearer ${token}\r\n\r\nbar`);
+    stream.write(`GET /foo HTTP/1.1\r\nAccept: application/json\r\nContent-Type: application/json\r\nAuthorization: Bearer ${token}\r\n\r\n`);
     stream.write(`GET /foo HTTP/1.1\r\nAccept: application/json\r\nContent-Type: application/json\r\nAuthorization: Bearer ${token}\r\n\r\n`);
     expect(destination.buffer.toString()).toMatchSnapshot();
   });
 
 
   it ("handles body separator splitted to separate chunks", async () => {
-    const stream = new PassThrough();
-    const parser = new StreamImpersonator();
-    const destination = new DummyWritable();
-
     parser.boredServer = boredServer;
     parser.saToken = "service-account-token";
     parser.publicKey = jwtPublicKey;
@@ -173,11 +200,7 @@ MwIDAQAB
   });
 
 
-  it ("handles non GET requests", async () => {
-    const stream = new PassThrough();
-    const parser = new StreamImpersonator();
-    const destination = new DummyWritable();
-
+  it ("handles non GET pipelined requests", async () => {
     parser.boredServer = boredServer;
     parser.saToken = "service-account-token";
     parser.publicKey = jwtPublicKey;
@@ -189,18 +212,30 @@ MwIDAQAB
     }, jwtPrivateKey, { algorithm: "RS256" });
 
     stream.pipe(parser).pipe(destination);
-    stream.write(`POST /apis/authorization.k8s.io/v1/selfsubjectaccessreviews HTTP/1.1\r\nAccept: application/json\r\nContent-Type:`);
-    stream.write(` application/json\r\nContent-Length: 324\r\nAuthorization: Bearer ${token}\r\n\r`);
-    stream.write(`\n{"apiVersion":"authorization.k8s.io/v1","kind":"SelfSubjectAccess`);
-    stream.write(`Review","spec":{"resourceAttributes":{"namespace":"kube-system","resource":"*","verb":"create"}}}{"apiVersion":"authorization.k8s.io/v1","kind":"SelfSubjectAccessReview","spec":{"resourceAttributes":{"namespace":"kube-system","resource":"*","verb":"create"}}}`);
+    stream.write(`GET /version HTTP/1.1\r\n`);
+    stream.write(`Host: 127.0.0.1:54642\r\n`);
+    stream.write(`User-Agent: kubectl/v1.21.2 (darwin/amd64) kubernetes/092fbfb\r\n`);
+    stream.write(`Accept: application/json\r\n`);
+    stream.write(`Authorization: Bearer ${token}\r\n`);
+    stream.write(`Content-Type: application/json\r\n`);
+    stream.write(`X-Forwarded-For: 127.0.0.1\r\n`);
+    stream.write(`Accept-Encoding: gzip\r\n\r\n`);
+
+    stream.write(`POST /apis/authorization.k8s.io/v1/selfsubjectaccessreviews HTTP/1.1\r\n`);
+    stream.write(`Host: 127.0.0.1:54642\r\n`);
+    stream.write(`User-Agent: kubectl/v1.21.2 (darwin/amd64) kubernetes/092fbfb\r\n`);
+    stream.write(`Content-Length: 162\r\n`);
+    stream.write(`Accept: application/json\r\n`);
+    stream.write(`Authorization: Bearer ${token}\r\n`);
+    stream.write(`Content-Type: application/json\r\n`);
+    stream.write(`X-Forwarded-For: 127.0.0.1\r\n`);
+    stream.write(`Accept-Encoding: gzip\r\n\r\n`);
+    stream.write(`{"apiVersion":"authorization.k8s.io/v1","kind":"SelfSubjectAccessReview","spec":{"resourceAttributes":{"namespace":"kube-system","resource":"*","verb":"create"}}}`);
+
     expect(destination.buffer.toString()).toMatchSnapshot();
   });
 
   it ("handles port-forward upgrade", async () => {
-    const stream = new PassThrough();
-    const parser = new StreamImpersonator();
-    const destination = new DummyWritable();
-
     parser.boredServer = boredServer;
     parser.saToken = "service-account-token";
     parser.publicKey = jwtPublicKey;
@@ -216,7 +251,7 @@ MwIDAQAB
     const thirdPartyToken = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c`;
 
     stream.write(`POST /apis/authorization.k8s.io/v1/selfsubjectaccessreviews HTTP/1.1\r\nAccept: application/json\r\nContent-Type:`);
-    stream.write(` application/json\r\nContent-Length: 0\r\nConnection: Upgrade\r\nAuthorization: Bearer ${token}\r\n\r\n`);
+    stream.write(` application/json\r\nConnection: Upgrade\r\nAuthorization: Bearer ${token}\r\n\r\n`);
     stream.write(`GET /version HTTP/1.1\r\nAccept: application/json\r\nContent-Type: application/json\r\nAuthorization: Bearer ${thirdPartyToken}\r\n\r\n`);
     stream.write(`POST /foo HTTP/1.1\r\nAccept: application/json\r\nContent-Type: application/json\r\nAuthorization: Bearer ${thirdPartyToken}\r\n\r\nbar`);
     stream.write(`GET /foo HTTP/1.1\r\nAccept: application/json\r\nContent-Type: application/json\r\nAuthorization: Bearer ${thirdPartyToken}\r\n\r\n`);
@@ -224,10 +259,6 @@ MwIDAQAB
   });
 
   it("does not impersonate on invalid token", async () => {
-    const stream = new PassThrough();
-    const parser = new StreamImpersonator();
-    const destination = new DummyWritable();
-
     parser.saToken = "service-account-token";
     parser.publicKey = jwtPublicKey;
 
@@ -242,10 +273,6 @@ MwIDAQAB
   });
 
   it("does not impersonate if token.aud is mismatch", async () => {
-    const stream = new PassThrough();
-    const parser = new StreamImpersonator();
-    const destination = new DummyWritable();
-
     parser.boredServer = "aud_one";
     parser.saToken = "service-account-token";
     parser.publicKey = jwtPublicKey;
@@ -261,10 +288,6 @@ MwIDAQAB
   });
 
   it("does not impersonate if token is expired", async () => {
-    const stream = new PassThrough();
-    const parser = new StreamImpersonator();
-    const destination = new DummyWritable();
-
     parser.boredServer = "aud_one";
     parser.saToken = "service-account-token";
     parser.publicKey = jwtPublicKey;
@@ -286,10 +309,6 @@ MwIDAQAB
     "Impersonate-Uid: 123", "Impersonate-Extra-Foo: asdasd",
     "imPersonate-uSer: admin"
   ])("rejects impersonate header %p from the client", (injectedHeader) => {
-    const stream = new PassThrough();
-    const parser = new StreamImpersonator();
-    const destination = new DummyWritable();
-
     parser.boredServer = boredServer;
     parser.saToken = "service-account-token";
     parser.publicKey = jwtPublicKey;

@@ -1,6 +1,6 @@
 {
   "name": "bored-agent",
-  "version": "0.6.1",
+  "version": "0.6.3",
   "description": "Bored Agent",
   "main": "dist/index.js",
   "author": "Mirantis Inc.",
@@ -14,7 +14,8 @@
   },
   "devDependencies": {
     "@types/jest": "^27.0.2",
-    "@types/jsonwebtoken": "^8.5.5",
+    "@types/jsonwebtoken": "^8.5.8",
+    "@types/lodash": "^4.14.178",
     "@types/node": "^16.11.6",
     "@types/pino": "^6.3.11",
     "@types/ws": "^7.4.7",
@@ -24,17 +25,19 @@
     "eslint-plugin-unused-imports": "^1.1.5",
     "jest": "^26.6.3",
     "ts-jest": "^26.5.6",
-    "ts-node": "^9.1.1",
+    "ts-node": "^10.4.0",
     "typescript": "^4.5.5"
   },
   "dependencies": {
     "@kubernetes/client-node": "^0.15.1",
-    "bored-mplex": "^0.0.20",
-    "got": "^11.8.2",
+    "bored-mplex": "^0.0.21",
+    "got": "^11.8.3",
+    "http-parser-js": "^0.5.5",
     "https-proxy-agent": "^5.0.0",
     "jsonwebtoken": "^8.5.1",
+    "lodash": "^4.17.21",
     "pino": "^6.13.2",
-    "pino-pretty": "^4.7.1",
+    "pino-pretty": "^7.5.1",
     "ws": "^7.4.6"
   }
 }

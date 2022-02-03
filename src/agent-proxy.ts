@@ -10,6 +10,7 @@ import { KeyPair } from "./keypair-manager";
 import { StreamParser } from "./stream-parser";
 import { StreamImpersonator } from "./stream-impersonator";
 import logger from "./logger";
+import { kubernetesPort, kubernetesHost } from "./k8s-client";
 
 export type AgentProxyOptions = {
   boredServer: string;
@@ -264,8 +265,8 @@ export class AgentProxy {
 
   handleDefaultRequestStream(stream: Stream) {
     const opts: tls.ConnectionOptions = {
-      host: process.env.KUBERNETES_HOST || "kubernetes.default.svc",
-      port: parseInt(process.env.KUBERNETES_SERVICE_PORT || "443"),
+      host: kubernetesHost,
+      port: kubernetesPort,
       timeout: 1_000 * 60 * 30 // 30 minutes
     };
 

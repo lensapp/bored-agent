@@ -2,6 +2,7 @@ import got, { Headers } from "got";
 import * as fs from "fs/promises";
 
 export const kubernetesHost = process.env.KUBERNETES_HOST || "kubernetes.default.svc";
+export const kubernetesPort = parseInt(process.env.KUBERNETES_SERVICE_PORT || "443");
 export const caCert = process.env.CA_CERT || "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt";
 export const serviceAccountTokenPath = process.env.SERVICEACCOUNT_TOKEN_PATH || "/var/run/secrets/kubernetes.io/serviceaccount/token";
 
@@ -57,7 +58,7 @@ export class K8sClient {
   }
 
   async patch<T>(path: string, obj: Object, headers = {}) {
-    const response = await got.patch(`https://${kubernetesHost}${path}`, {
+    const response = await got.patch(`https://${kubernetesHost}:${kubernetesPort}${path}`, {
       headers: {
         ...this.headers,
         ...headers

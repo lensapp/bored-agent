@@ -46,7 +46,12 @@ export class StreamImpersonator extends Transform {
         token = headers[authIndex][1].trim().replace("Bearer ", "");
 
         if (token && token !== "") {
-          this.impersonateJwtToken(headers, token, authIndex);
+          const tokenData = this.impersonateJwtToken(headers, token, authIndex);
+
+          if (tokenData) {
+            logger.info(`[AUDIT] impersonating user ${tokenData.sub} (groups: ${tokenData.groups}) : ${info.method} ${info.url}`);
+          }
+
           this.push(headers.map((h) => `${h[0]}: ${h[1]}`).join("\r\n"));
           this.push("\r\n\r\n");
           this.chunks = [];
@@ -111,8 +116,6 @@ export class StreamImpersonator extends Transform {
         audience: [this.boredServer]
       }) as TokenPayload;
 
-      logger.info(`[IMPERSONATOR] impersonating user ${tokenData.sub}`);
-
       headers.splice(authIndex, 1); // remove existing authorization header
 
       headers.push(["authorization", `Bearer ${this.saToken}`]);
@@ -121,6 +124,8 @@ export class StreamImpersonator extends Transform {
       tokenData?.groups?.forEach((group) => {
         headers.push(["impersonate-group", group]);
       });
+
+      return tokenData;
     } catch(err) {
       logger.error("[IMPERSONATOR] jwt parsing failed: %s", String(err));
     }

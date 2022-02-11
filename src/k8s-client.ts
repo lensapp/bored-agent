@@ -37,8 +37,12 @@ export class K8sClient {
     };
   }
 
+  private getUrl(path: string) {
+    return `https://${kubernetesHost}:${kubernetesPort}${path}`;
+  }
+
   async get<T>(path: string, headers = {}): Promise<T> {
-    const response = await got.get(`https://${kubernetesHost}${path}`, {
+    const response = await got.get(this.getUrl(path), {
       headers: {
         ...headers,
         ...this.headers,
@@ -58,7 +62,7 @@ export class K8sClient {
   }
 
   async patch<T>(path: string, obj: Object, headers = {}) {
-    const response = await got.patch(`https://${kubernetesHost}:${kubernetesPort}${path}`, {
+    const response = await got.patch(this.getUrl(path), {
       headers: {
         ...this.headers,
         ...headers

@@ -68,7 +68,13 @@ function getConfig() {
     // e.g. "lens-platform"
     NAMESPACE: process.env.NAMESPACE,
 
-    // e.g. "https://api.k8slens.dev"
+    // e.t. "https://api.k8slens.dev/bored-agent/v2/bored-agent.yml"
+    AUTO_UPDATE_URL: process.env.AUTO_UPDATE_URL,
+
+    /**
+    @deprecated Will be removed in favor of AUTO_UPDATE_URL
+    e.g. "https://api.k8slens.dev"
+    */
     LENS_BACKEND_URL: process.env.LENS_BACKEND_URL
   };
 
@@ -84,7 +90,9 @@ function getConfig() {
 type Config = ReturnType<typeof getConfig>;
 
 async function fetchBoredAgentYml(config: Config) {
-  const url = `${config.LENS_BACKEND_URL}/bored-agent/v2/bored-agent.yml`;
+  const url = config.AUTO_UPDATE_URL ?
+    config.AUTO_UPDATE_URL :
+    `${config.LENS_BACKEND_URL}/bored-agent/v2/bored-agent.yml`;
 
   console.log(`Fetching bored-agent.yml from ${url}`);
 
@@ -105,6 +113,7 @@ async function fetchBoredAgentYml(config: Config) {
     .replaceAll("$BORED_TOKEN", `'${config.BORED_TOKEN}'`)
     .replaceAll("$LENS_PLATFORM_K8S_CLUSTER_ID", `'${config.LENS_PLATFORM_K8S_CLUSTER_ID}'`)
     .replaceAll("$LENS_PLATFORM_SPACE_NAME", `'${config.LENS_PLATFORM_SPACE_NAME}'`)
+    .replaceAll("$AUTO_UPDATE_URL", `'${config.AUTO_UPDATE_URL}'`)
     .replaceAll("$LENS_BACKEND_URL", `'${config.LENS_BACKEND_URL}'`);
 
   return yml;

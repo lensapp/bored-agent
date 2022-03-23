@@ -68,7 +68,7 @@ function getConfig() {
     // e.g. "lens-platform"
     NAMESPACE: process.env.NAMESPACE,
 
-    // e.t. "https://api.k8slens.dev/bored-agent/v2/bored-agent.yml"
+    // e.g. "https://api.k8slens.dev/bored-agent/v2/bored-agent.yml"
     AUTO_UPDATE_URL: process.env.AUTO_UPDATE_URL,
 
     /**

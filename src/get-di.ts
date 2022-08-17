@@ -1,4 +1,5 @@
 import { createContainer } from "@ogre-tools/injectable";
+import createAgentProxyInjectable from "./create-agent-proxy.injectable";
 import createConnectionInjectable from "./create-connection.injectable";
 import createTLSConnectionInjectable from "./create-tls-connection.injectable";
 import createWebSocketInjectable from "./create-websocket.injectable";
@@ -12,6 +13,7 @@ import readFileInjectable from "./read-file.injectable";
 export const getDi = () => {
   const di = createContainer("main");
 
+  di.register(createAgentProxyInjectable);
   di.register(createConnectionInjectable);
   di.register(createTLSConnectionInjectable);
   di.register(createWebSocketInjectable);

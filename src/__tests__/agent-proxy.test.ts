@@ -13,6 +13,14 @@ describe("AgentProxy", () => {
       boredServer: "https://bored.acme.org",
       boredToken: "foo.bar.baz",
       idpPublicKey: "this-is-not-valid"
+    }, {
+      readFileSync: jest.fn(),
+      existsSync: jest.fn(),
+      got: jest.fn() as any,
+      logger: jest.fn() as any,
+      createConnection: jest.fn(),
+      createTlsConnection: jest.fn(),
+      createWebsocket: jest.fn(),
     });
   });
 

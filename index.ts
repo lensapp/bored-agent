@@ -1,7 +1,20 @@
-import { AgentProxy } from "./src/agent-proxy";
+import { AgentProxy, AgentProxyOptions } from "./src/agent-proxy";
 import { KeyPairManager } from "./src/keypair-manager";
 import { version } from "./package.json";
-import logger from "./src/logger";
+import { getDi } from "./src/get-di";
+import { HttpsProxyAgent } from "https-proxy-agent";
+import createWebSocketInjectable from "./src/create-websocket.injectable";
+import readFileSyncInjectable from "./src/read-file-sync.injectable";
+import existsSyncInjectable from "./src/exists-sync.injectable";
+import loggerInjectable from "./src/logger.injectable";
+import createConnectionInjectable from "./src/create-connection.injectable";
+import gotInjectable from "./src/got.injectable";
+import createTLSConnectionInjectable from "./src/create-tls-connection.injectable";
+import k8sClientInjectable from "./src/k8s-client.injectable";
+
+const di = getDi();
+
+const logger = di.inject(loggerInjectable);
 
 process.title = "bored-agent";
 
@@ -24,13 +37,27 @@ if (!namespace) {
   process.exit(1);
 }
 
-const proxy = new AgentProxy({
+const agentProxyOpts: AgentProxyOptions = {
   boredServer,
   boredToken,
   idpPublicKey
+};
+
+if (process.env.HTTPS_PROXY) {
+  agentProxyOpts.httpsProxyAgent = new HttpsProxyAgent(process.env.HTTPS_PROXY);
+}
+
+const proxy = new AgentProxy(agentProxyOpts, {
+  logger,
+  got: di.inject(gotInjectable),
+  readFileSync: di.inject(readFileSyncInjectable),
+  existsSync: di.inject(existsSyncInjectable),
+  createWebsocket: di.inject(createWebSocketInjectable),
+  createConnection: di.inject(createConnectionInjectable),
+  createTlsConnection: di.inject(createTLSConnectionInjectable),
 });
 
-const keyPairManager = new KeyPairManager(namespace);
+const keyPairManager = new KeyPairManager(namespace, di.inject(k8sClientInjectable));
 
 keyPairManager.ensureKeys().then((keys) => {
   proxy.init(keys);

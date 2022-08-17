@@ -25,7 +25,7 @@ export class KeyPairManager {
   private namespace: string;
   private apiClient: K8sClient;
 
-  constructor(namespace: string, client: K8sClient = new K8sClient()) {
+  constructor(namespace: string, client: K8sClient) {
     this.namespace = namespace;
     this.apiClient = client;
   }

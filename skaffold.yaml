@@ -14,6 +14,7 @@ build:
         - "yarn.*"
   local:
     useBuildkit: true
+    push: false
 deploy:
   kubectl:
     manifests:

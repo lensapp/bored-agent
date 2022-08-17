@@ -1,4 +1,4 @@
-import pino from "pino";
+import pino, { LogFn } from "pino";
 
 const logger = pino({
   prettyPrint: {
@@ -6,5 +6,10 @@ const logger = pino({
     translateTime: true
   }
 });
+
+export interface Logger {
+  info: LogFn,
+  error: LogFn,
+}
 
 export default logger;

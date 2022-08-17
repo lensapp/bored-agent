@@ -2,20 +2,23 @@ import WebSocket from "ws";
 import * as tls from "tls";
 import * as net from "net";
 import * as fs from "fs";
-import got, { OptionsOfTextResponseBody } from "got";
+import { Got, OptionsOfTextResponseBody } from "got";
 import { HttpsProxyAgent } from "https-proxy-agent";
 import { BoredMplex, Stream } from "bored-mplex";
-import { createDecipheriv, createCipheriv } from "crypto";
 import { KeyPair } from "./keypair-manager";
-import { StreamParser } from "./stream-parser";
-import { StreamImpersonator } from "./stream-impersonator";
-import logger from "./logger";
+import logger, { Logger } from "./logger";
 import { kubernetesPort, kubernetesHost } from "./k8s-client";
+import { unixRequestStream } from "./proxy-handlers/unix-request-stream";
+import { tcpRequestStream } from "./proxy-handlers/tcp-request-stream";
+import { TLSSockets } from "./tls-sockets";
+import { defaultRequestStream } from "./proxy-handlers/default-request-stream";
+import { TLSSession } from "./tls-session";
 
 export type AgentProxyOptions = {
   boredServer: string;
   boredToken: string;
   idpPublicKey: string;
+  httpsProxyAgent?: HttpsProxyAgent;
 };
 
 export type StreamHeader = {
@@ -25,39 +28,55 @@ export type StreamHeader = {
 const caCert = process.env.CA_CERT || "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt";
 const serviceAccountTokenPath = process.env.SERVICEACCOUNT_TOKEN_PATH || "/var/run/secrets/kubernetes.io/serviceaccount/token";
 
+export interface AgentProxyDependencies {
+  readFileSync: typeof fs.readFileSync;
+  existsSync: typeof fs.existsSync;
+  got: Got;
+  logger: Logger;
+  createConnection: typeof net.createConnection;
+  createTlsConnection: typeof tls.connect;
+  createWebsocket: (url: string, opts: WebSocket.ClientOptions) => WebSocket;
+}
+
 export class AgentProxy {
   private boredServer: string;
   private boredToken: string;
   private idpPublicKey: string;
+  private httpsProxyAgent?: HttpsProxyAgent;
   private cipherAlgorithm = "aes-256-gcm";
   private mplex?: BoredMplex;
   private ws?: WebSocket;
   private caCert?: Buffer;
-  private tlsSession?: Buffer;
+  private tlsSession: TLSSession;
   private keys?: KeyPair;
   private retryTimeout?: NodeJS.Timeout;
   private serviceAccountToken?: Buffer;
-  private tlsSockets: tls.TLSSocket[] = [];
+  private tlsSockets: TLSSockets;
+  private deps: AgentProxyDependencies;
 
-  constructor(opts: AgentProxyOptions) {
+  constructor(opts: AgentProxyOptions, deps: AgentProxyDependencies) {
     this.boredServer = opts.boredServer;
     this.boredToken = opts.boredToken;
     this.idpPublicKey = opts.idpPublicKey;
-
-    if (fs.existsSync(caCert)) {
-      this.caCert = fs.readFileSync(caCert);
-    }
-
-    if (fs.existsSync(serviceAccountTokenPath)) {
-      this.serviceAccountToken = fs.readFileSync(serviceAccountTokenPath);
-    }
+    this.httpsProxyAgent = opts.httpsProxyAgent;
+    this.tlsSockets = new TLSSockets();
+    this.tlsSession = new TLSSession();
+    this.deps = deps;
   }
 
   init(keys: KeyPair) {
     this.keys = keys;
 
+    if (this.deps.existsSync(caCert)) {
+      this.caCert = this.deps.readFileSync(caCert);
+    }
+
+    if (this.deps.existsSync(serviceAccountTokenPath)) {
+      this.serviceAccountToken = this.deps.readFileSync(serviceAccountTokenPath);
+    }
+
     setInterval(() => {
-      if (this.ws) logger.info(`[PROXY] ${this.tlsSockets.length} active sockets`);
+      if (this.ws) logger.info(`[PROXY] ${this.tlsSockets.get().length} active sockets`);
     }, 10_000);
   }
 
@@ -69,8 +88,8 @@ export class AgentProxy {
       }
     };
 
-    if (process.env.HTTPS_PROXY) {
-      options.agent = new HttpsProxyAgent(process.env.HTTPS_PROXY);
+    if (this.httpsProxyAgent) {
+      options.agent = this.httpsProxyAgent;
     }
 
     return options;
@@ -83,7 +102,7 @@ export class AgentProxy {
       await this.syncPublicKeyFromServer();
     }
 
-    this.ws = new WebSocket(`${this.boredServer}/agent/connect`, this.buildWebSocketOptions());
+    this.ws = this.deps.createWebsocket(`${this.boredServer}/agent/connect`, this.buildWebSocketOptions());
     this.ws.on("open", () => {
       if (!this.ws) return;
 
@@ -125,8 +144,8 @@ export class AgentProxy {
       }
     };
 
-    if (process.env.HTTPS_PROXY) {
-      options.agent = { https: new HttpsProxyAgent(process.env.HTTPS_PROXY) };
+    if (this.httpsProxyAgent) {
+      options.agent = { https: this.httpsProxyAgent };
     }
 
     return options;
@@ -134,7 +153,7 @@ export class AgentProxy {
 
   protected async syncPublicKeyFromServer() {
     try {
-      const res = await got.get(`${this.boredServer}/.well-known/public_key`, this.buildGotOptions());
+      const res = await this.deps.got.get(`${this.boredServer}/.well-known/public_key`, this.buildGotOptions());
 
       logger.info(`[PROXY] fetched idp public key from server`);
       this.idpPublicKey = res.body;
@@ -146,7 +165,7 @@ export class AgentProxy {
   }
 
   protected closeTlsSockets() {
-    this.tlsSockets.forEach((socket) => {
+    this.tlsSockets.get().forEach((socket) => {
       try {
         socket.end();
       } catch (error) {
@@ -196,51 +215,17 @@ export class AgentProxy {
   }
 
   handleTcpRequestStream(stream: Stream, host: string, port: number) {
-    const socket = net.createConnection(port, host, () => {
-      const parser = new StreamParser();
-
-      parser.bodyParser = (key: Buffer, iv: Buffer) => {
-        const decipher = createDecipheriv(this.cipherAlgorithm, key, iv);
-        const cipher = createCipheriv(this.cipherAlgorithm, key, iv);
-
-        parser.pipe(decipher).pipe(socket).pipe(cipher).pipe(stream);
-      };
-
-      parser.privateKey = this.keys?.private || "";
-
-      try {
-        stream.pipe(parser);
-      } catch (error) {
-        logger.error("[STREAM PARSER] failed to parse stream %s", error);
-        stream.end();
-      }
+    tcpRequestStream(this.keys?.private || "", this.cipherAlgorithm, stream, host, port, {
+      logger: this.deps.logger,
+      createConnection: this.deps.createConnection
     });
-
-    this.registerCommonSocketStreamEvents(socket, stream);
   }
 
   handleUnixRequestStream(stream: Stream, socketPath: string) {
-    const socket = net.createConnection(socketPath, () => {
-      const parser = new StreamParser();
-
-      parser.bodyParser = (key: Buffer, iv: Buffer) => {
-        const decipher = createDecipheriv(this.cipherAlgorithm, key, iv);
-        const cipher = createCipheriv(this.cipherAlgorithm, key, iv);
-
-        parser.pipe(decipher).pipe(socket).pipe(cipher).pipe(stream);
-      };
-
-      parser.privateKey = this.keys?.private || "";
-
-      try {
-        stream.pipe(parser);
-      } catch (error) {
-        logger.error("[STREAM PARSER] failed to parse stream %s", error);
-        stream.end();
-      }
+    unixRequestStream(this.keys?.private || "", this.cipherAlgorithm, stream, socketPath, { 
+      logger: this.deps.logger,
+      createConnection: this.deps.createConnection
     });
-
-    this.registerCommonSocketStreamEvents(socket, stream);
   }
 
   protected registerCommonSocketStreamEvents(socket: net.Socket, stream: Stream) {
@@ -264,77 +249,20 @@ export class AgentProxy {
   }
 
   handleDefaultRequestStream(stream: Stream) {
-    const opts: tls.ConnectionOptions = {
+    defaultRequestStream(stream, {
       host: kubernetesHost,
       port: kubernetesPort,
-      timeout: 1_000 * 60 * 30 // 30 minutes
-    };
-
-    if (this.caCert) {
-      opts.ca = this.caCert;
-    } else {
-      opts.rejectUnauthorized = false;
-
-      opts.checkServerIdentity = () => {
-        return undefined;
-      };
-    }
-
-    if (this.tlsSession) {
-      opts.session = this.tlsSession;
-    }
-
-    const socket = tls.connect(opts, () => {
-      this.tlsSockets.push(socket);
-      const parser = new StreamParser();
-
-      parser.bodyParser = (key: Buffer, iv: Buffer) => {
-        const decipher = createDecipheriv(this.cipherAlgorithm, key, iv);
-        const cipher = createCipheriv(this.cipherAlgorithm, key, iv);
-
-        if (this.serviceAccountToken && this.idpPublicKey !== "") {
-          const streamImpersonator = new StreamImpersonator();
-
-          streamImpersonator.publicKey = this.idpPublicKey;
-          streamImpersonator.boredServer = this.boredServer;
-          streamImpersonator.saToken = this.serviceAccountToken.toString();
-          parser.pipe(decipher).pipe(streamImpersonator).pipe(socket).pipe(cipher).pipe(stream);
-        } else {
-          parser.pipe(decipher).pipe(socket).pipe(cipher).pipe(stream);
-        }
-      };
-
-      parser.privateKey = this.keys?.private || "";
-
-      try {
-        stream.pipe(parser);
-      } catch (error) {
-        logger.error("[STREAM PARSER] failed to parse stream %s", error);
-        stream.end();
-      }
-    });
-
-    socket.on("timeout", () => {
-      socket.end();
-    });
-
-    socket.on("error", (error) => {
-      logger.info("[PROXY] TLS socket error: ", error);
-      socket.end();
-    });
-
-    socket.on("end", () => {
-      this.tlsSockets = this.tlsSockets.filter((tlsSocket) => tlsSocket !== socket);
-      stream.end();
-    });
-
-    socket.on("session", (session) => {
-      this.tlsSession = session;
-    });
-
-    stream.on("finish", () => {
-      logger.info("[PROXY] request ended");
-      socket.end();
+      cipherAlgorithm: this.cipherAlgorithm,
+      serviceAccountToken: this.serviceAccountToken,
+      idpPublicKey: this.idpPublicKey,
+      boredServer: this.boredServer,
+      privateKey: this.keys?.private || "",
+      caCert: this.caCert
+    }, {
+      logger: this.deps.logger,
+      connect: this.deps.createTlsConnection,
+      tlsSession: this.tlsSession,
+      tlsSockets: this.tlsSockets
     });
   }
 

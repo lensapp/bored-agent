@@ -1,11 +1,20 @@
+import { DiContainer } from "@ogre-tools/injectable";
 import { StreamParser } from "../stream-parser";
 import { PassThrough } from "stream";
 import { KeyPairManager } from "../keypair-manager";
 import { publicEncrypt, randomBytes } from "crypto";
+import { getDi } from "../get-di";
+import k8sClientInjectable from "../k8s-client.injectable";
 
 describe("StreamParser", () => {
+  let di: DiContainer;
+
+  beforeEach(() => {
+    di = getDi();
+  });
+
   it ("parses bored header", async () => {
-    const keyPairManager = new KeyPairManager("default");
+    const keyPairManager = new KeyPairManager("default", di.inject(k8sClientInjectable));
     const stream = new PassThrough();
     const parser = new StreamParser();
     const keys = await keyPairManager.generateKeys();
@@ -29,7 +38,7 @@ describe("StreamParser", () => {
   });
 
   it ("ignores invalid header value", async () => {
-    const keyPairManager = new KeyPairManager("default");
+    const keyPairManager = new KeyPairManager("default", di.inject(k8sClientInjectable));
     const stream = new PassThrough();
     const parser = new StreamParser();
     const keys = await keyPairManager.generateKeys();

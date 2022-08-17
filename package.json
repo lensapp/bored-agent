@@ -30,6 +30,8 @@
   },
   "dependencies": {
     "@kubernetes/client-node": "^0.15.1",
+    "@ogre-tools/injectable": "^9.0.2",
+    "@ogre-tools/injectable-extension-for-auto-registration": "^9.0.2",
     "bored-mplex": "^0.0.21",
     "got": "^11.8.3",
     "http-parser-js": "^0.5.5",

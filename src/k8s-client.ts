@@ -1,4 +1,4 @@
-import got, { Headers } from "got";
+import { Got, Headers } from "got";
 import * as fs from "fs/promises";
 
 export const kubernetesHost = process.env.KUBERNETES_HOST || "kubernetes.default.svc";
@@ -22,14 +22,21 @@ export class K8sError extends Error {
   }
 }
 
+interface Dependencies {
+  got: Got;
+  readFile: typeof fs.readFile
+}
+
 export class K8sClient {
   private serviceAccountToken = "";
   private caCert = "";
   private headers: Headers = {};
 
+  constructor(protected deps: Dependencies) {}
+
   async init() {
-    this.serviceAccountToken = (await fs.readFile(serviceAccountTokenPath)).toString();
-    this.caCert = (await fs.readFile(caCert)).toString();
+    this.serviceAccountToken = (await this.deps.readFile(serviceAccountTokenPath)).toString();
+    this.caCert = (await this.deps.readFile(caCert)).toString();
 
     this.headers = {
       "Authorization": `Bearer ${this.serviceAccountToken}`,
@@ -42,7 +49,7 @@ export class K8sClient {
   }
 
   async get<T>(path: string, headers = {}): Promise<T> {
-    const response = await got.get(this.getUrl(path), {
+    const response = await this.deps.got.get(this.getUrl(path), {
       headers: {
         ...headers,
         ...this.headers,
@@ -62,7 +69,7 @@ export class K8sClient {
   }
 
   async patch<T>(path: string, obj: Object, headers = {}) {
-    const response = await got.patch(this.getUrl(path), {
+    const response = await this.deps.got.patch(this.getUrl(path), {
       headers: {
         ...this.headers,
         ...headers

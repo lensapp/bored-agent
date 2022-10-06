@@ -94,6 +94,16 @@ export class AgentProxy {
 
       const wsDuplex = WebSocket.createWebSocketStream(this.ws);
 
+      wsDuplex.on("error", (error) => {
+        // wsDuplex may emit error when data is being written to the websocket which is already closing.
+        // In these cases we ignore the error as ws will retry on "close" event.
+        if (!String(error?.message).includes("WebSocket is not open")) {
+          throw error;
+        } else {
+          logger.warn("[PROXY] Duplex stream error: WebSocket is not open.");
+        }
+      });
+
       this.mplex.pipe(wsDuplex).pipe(this.mplex);
     });
 

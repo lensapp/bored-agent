@@ -13,6 +13,7 @@
     "build-image": "docker build -t bored-agent:latest ."
   },
   "devDependencies": {
+    "@types/is-url": "^1.2.30",
     "@types/jest": "^27.0.2",
     "@types/jsonwebtoken": "^8.5.8",
     "@types/lodash": "^4.14.178",
@@ -34,6 +35,7 @@
     "got": "^11.8.5",
     "http-parser-js": "^0.5.5",
     "https-proxy-agent": "^5.0.0",
+    "is-url": "^1.2.4",
     "jsonwebtoken": "^8.5.1",
     "lodash": "^4.17.21",
     "pino": "^6.13.2",

@@ -1,6 +1,7 @@
 import * as k8s from "@kubernetes/client-node";
 import type { KubeConfig } from "@kubernetes/client-node";
 import got from "got";
+import isUrl from "is-url";
 
 /**
  * bored-agent updater.
@@ -89,10 +90,16 @@ function getConfig() {
 
 type Config = ReturnType<typeof getConfig>;
 
+function getBoredAgentUrl(AUTO_UPDATE_URL: string | undefined, LENS_BACKEND_URL: string | undefined) {
+  const url = isUrl(AUTO_UPDATE_URL ?? "") ?
+    AUTO_UPDATE_URL as string :
+    `${LENS_BACKEND_URL}/bored-agent/v2/bored-agent.yml`;
+
+  return url;
+}
+
 async function fetchBoredAgentYml(config: Config) {
-  const url = config.AUTO_UPDATE_URL ?
-    config.AUTO_UPDATE_URL :
-    `${config.LENS_BACKEND_URL}/bored-agent/v2/bored-agent.yml`;
+  const url = getBoredAgentUrl(config.AUTO_UPDATE_URL, config.LENS_BACKEND_URL);
 
   console.log(`Fetching bored-agent.yml from ${url}`);
 

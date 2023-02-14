@@ -1,14 +1,14 @@
-FROM node:16-alpine as build
+FROM node:16-bullseye-slim as build
 
 RUN mkdir /app
 WORKDIR /app
 COPY . /app
-RUN apk add --update gcc g++ make python3 && \
+RUN apt-get update -y -q && apt-get install -y -q gcc g++ make python3 && \
     yarn install --frozen-lockfile && \
     yarn dist && \
     yarn install --frozen-lockfile --prod
 
-FROM node:16-alpine
+FROM node:16-bullseye-slim
 
 RUN mkdir /app
 WORKDIR /app

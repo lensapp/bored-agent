@@ -79,12 +79,6 @@ function getConfig() {
     LENS_BACKEND_URL: process.env.LENS_BACKEND_URL
   };
 
-  const missingConfiguration = Object.entries(config).find(([, value]) => !value);
-
-  if (missingConfiguration) {
-    throw new Error(`Environment variable ${missingConfiguration[0]} not set`);
-  }
-
   return config;
 }
 

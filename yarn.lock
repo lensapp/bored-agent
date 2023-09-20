@@ -2556,10 +2556,10 @@ http-cache-semantics@^4.0.0:
   resolved "https://registry.yarnpkg.com/http-cache-semantics/-/http-cache-semantics-4.1.1.tgz#abe02fcb2985460bf0323be664436ec3476a6d5a"
   integrity sha512-er295DKPVsV82j5kw1Gjt+ADA/XYHsajl82cGNQG2eyoPkvgUhX+nDIyelzhIWbbsXP39EHcI6l5tYs2FYqYXQ==
 
-http-parser-js@^0.5.5:
-  version "0.5.5"
-  resolved "https://registry.yarnpkg.com/http-parser-js/-/http-parser-js-0.5.5.tgz#d7c30d5d3c90d865b4a2e870181f9d6f22ac7ac5"
-  integrity sha512-x+JVEkO2PoM8qqpbPbOL3cqHPwerep7OwzK7Ay+sMQjKzaKCqWvjoXm5tqMP9tXWWTnTzAjIhXg+J99XYuPhPA==
+http-parser-js@^0.5.8:
+  version "0.5.8"
+  resolved "https://registry.yarnpkg.com/http-parser-js/-/http-parser-js-0.5.8.tgz#af23090d9ac4e24573de6f6aecc9d84a48bf20e3"
+  integrity sha512-SGeBX54F94Wgu5RH3X5jsDtf4eHyRogWX1XGT3b4HuW3tQPM4AaBzoUji/4AAJNXCEOWZ5O0DgZmJw1947gD5Q==
 
 http-proxy-agent@^4.0.1:
   version "4.0.1"

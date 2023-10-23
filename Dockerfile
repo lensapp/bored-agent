@@ -1,4 +1,4 @@
-FROM node:16-bullseye-slim as build
+FROM node:21-bullseye-slim as build
 
 RUN mkdir /app
 WORKDIR /app
@@ -8,7 +8,7 @@ RUN apt-get update -y -q && apt-get install -y -q gcc g++ make python3 && \
     yarn dist && \
     yarn install --frozen-lockfile --prod
 
-FROM node:16-bullseye-slim
+FROM node:21-bullseye-slim
 
 RUN mkdir /app
 WORKDIR /app

@@ -18,6 +18,12 @@ export type AgentProxyOptions = {
   idpPublicKey: string;
 };
 
+export type AgentProxyDependencies = {
+  tlsConnect: typeof tls.connect;
+  fileExists: typeof fs.existsSync;
+  readFile: typeof fs.readFileSync;
+};
+
 export type StreamHeader = {
   target: string;
 };
@@ -38,18 +44,27 @@ export class AgentProxy {
   private retryTimeout?: NodeJS.Timeout;
   private serviceAccountToken?: Buffer;
   private tlsSockets: tls.TLSSocket[] = [];
+  private dependencies: AgentProxyDependencies;
 
-  constructor(opts: AgentProxyOptions) {
+  constructor(
+    opts: AgentProxyOptions, 
+    dependencies: AgentProxyDependencies = { 
+      tlsConnect: tls.connect,
+      fileExists: fs.existsSync,
+      readFile: fs.readFileSync,
+    }
+  ) {
     this.boredServer = opts.boredServer;
     this.boredToken = opts.boredToken;
     this.idpPublicKey = opts.idpPublicKey;
+    this.dependencies = dependencies;
 
-    if (fs.existsSync(caCert)) {
-      this.caCert = fs.readFileSync(caCert);
+    if (this.dependencies.fileExists(caCert)) {
+      this.caCert = this.dependencies.readFile(caCert);
     }
 
-    if (fs.existsSync(serviceAccountTokenPath)) {
-      this.serviceAccountToken = fs.readFileSync(serviceAccountTokenPath);
+    if (this.dependencies.fileExists(serviceAccountTokenPath)) {
+      this.serviceAccountToken = this.dependencies.readFile(serviceAccountTokenPath);
     }
   }
 
@@ -282,19 +297,13 @@ export class AgentProxy {
 
     if (this.caCert) {
       opts.ca = this.caCert;
-    } else {
-      opts.rejectUnauthorized = false;
-
-      opts.checkServerIdentity = () => {
-        return undefined;
-      };
     }
 
     if (this.tlsSession) {
       opts.session = this.tlsSession;
     }
 
-    const socket = tls.connect(opts, () => {
+    const socket = this.dependencies.tlsConnect(opts, () => {
       this.tlsSockets.push(socket);
       const parser = new StreamParser();
 

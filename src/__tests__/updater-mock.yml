@@ -1,0 +1,84 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: lens-platform
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: lens-platform-cluster
+  namespace: lens-platform
+data:
+  lensPlatformK8sclusterId: $LENS_PLATFORM_K8S_CLUSTER_ID
+  lensPlatformSpaceName: $LENS_PLATFORM_SPACE_NAME
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: bored-agent-updater
+  namespace: lens-platform
+spec:
+  schedule: "@hourly"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: bored-agent-updater
+          containers:
+            - name: bored-agent-updater
+              image: quay.io/k8slens/bored-agent:0.10.0
+              env:
+                - name: NAMESPACE
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.namespace
+                - name: BORED_SERVER
+                  value: $BORED_SERVER
+                - name: BORED_TOKEN
+                  value: $BORED_TOKEN
+                - name: LENS_PLATFORM_K8S_CLUSTER_ID
+                  value: $LENS_PLATFORM_K8S_CLUSTER_ID
+                - name: LENS_PLATFORM_SPACE_NAME
+                  value: $LENS_PLATFORM_SPACE_NAME
+                - name: LENS_BACKEND_URL
+                  value: $LENS_BACKEND_URL
+                - name: AUTO_UPDATE_URL
+                  value: $AUTO_UPDATE_URL
+              command:
+                - node
+                - dist/src/updater.js
+          restartPolicy: Never
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bored-agent
+  namespace: lens-platform
+  labels:
+    app: bored-agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bored-agent
+  template:
+    metadata:
+      labels:
+        app: bored-agent
+    spec:
+      priorityClassName: "lens-bored-agent"
+      serviceAccountName: bored-agent
+      containers:
+        - name: agent
+          image: quay.io/k8slens/bored-agent:0.10.0
+          env:
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: BORED_SERVER
+              value: $BORED_SERVER
+            - name: BORED_TOKEN
+              value: $BORED_TOKEN
+---
+

@@ -79,6 +79,8 @@ export function getConfig() {
     e.g. "https://api.k8slens.dev"
     */
     LENS_BACKEND_URL: process.env.LENS_BACKEND_URL,
+
+    HTTPS_PROXY: process.env.HTTPS_PROXY,
   };
 
   return config;
@@ -96,6 +98,10 @@ const configKeysByPlaceholders: Record<string, keyof Config> = {
   $LENS_BACKEND_URL: "LENS_BACKEND_URL",
 };
 
+// For backwards compatibilty these values added later need to be empty
+// instead of having a placeholder to ensure it doesn't break old versions
+const configKeysToFillWhenEmpty: (keyof Config)[] = ["HTTPS_PROXY"];
+
 function getBoredAgentUrl(
   AUTO_UPDATE_URL: string | undefined,
   LENS_BACKEND_URL: string | undefined
@@ -110,12 +116,29 @@ function getBoredAgentUrl(
 function getConfigReplacer(config: Record<string, any>) {
   const placeholders = Object.keys(configKeysByPlaceholders);
 
-  return function configPlaceholderReplacer(key: string, value: any) {
-    if (typeof value === "string" && placeholders.includes(value)) {
-      return config[configKeysByPlaceholders[value]];
+  /**
+   * Replacer with the shape of JSON.stringify's replacer.
+   * The object in which the key was found is provided as the replacer's this context.
+   */
+  return function configPlaceholderReplacer(
+    this: any,
+    key: string,
+    content: any
+  ) {
+    if (typeof content === "string" && placeholders.includes(content)) {
+      return config[configKeysByPlaceholders[content]];
     }
 
-    return value;
+    if (
+      typeof content === "object" &&
+      content?.name &&
+      content?.value === "" &&
+      configKeysToFillWhenEmpty.includes(content.name)
+    ) {
+      return { ...content, value: config[content.name] };
+    }
+
+    return content;
   };
 }
 

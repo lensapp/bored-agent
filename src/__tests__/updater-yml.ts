@@ -15,6 +15,7 @@ describe("updater", () => {
       NAMESPACE: "some-NAMESPACE",
       AUTO_UPDATE_URL: "https://some-url.irrelevant/some-file-path",
       LENS_BACKEND_URL: "https://some-url.irrelevant/",
+      HTTPS_PROXY: "some-HTTPS_PROXY",
     };
 
     const mockData = fs.readFileSync(

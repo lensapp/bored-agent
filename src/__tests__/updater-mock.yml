@@ -80,5 +80,7 @@ spec:
               value: $BORED_SERVER
             - name: BORED_TOKEN
               value: $BORED_TOKEN
+            - name: HTTPS_PROXY
+              value: ""
 ---
 

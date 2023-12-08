@@ -49,6 +49,8 @@ spec:
                   value: https://some-url.irrelevant/
                 - name: AUTO_UPDATE_URL
                   value: https://some-url.irrelevant/some-file-path
+                - name: HTTPS_PROXY
+                  value: some-HTTPS_PROXY
               command:
                 - node
                 - dist/src/updater.js

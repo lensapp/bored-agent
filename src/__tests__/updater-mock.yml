@@ -44,6 +44,8 @@ spec:
                   value: $LENS_BACKEND_URL
                 - name: AUTO_UPDATE_URL
                   value: $AUTO_UPDATE_URL
+                - name: HTTPS_PROXY
+                  value: ""
               command:
                 - node
                 - dist/src/updater.js

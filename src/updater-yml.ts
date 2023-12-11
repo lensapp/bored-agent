@@ -80,7 +80,8 @@ export function getConfig() {
     */
     LENS_BACKEND_URL: process.env.LENS_BACKEND_URL,
 
-    HTTPS_PROXY: process.env.HTTPS_PROXY,
+    HTTPS_PROXY: process.env.BORED_HTTPS_PROXY,
+    BORED_HTTPS_PROXY: process.env.BORED_HTTPS_PROXY,
   };
 
   return config;
@@ -100,7 +101,10 @@ const configKeysByPlaceholders: Record<string, keyof Config> = {
 
 // For backwards compatibilty these values added later need to be empty
 // instead of having a placeholder to ensure it doesn't break old versions
-const configKeysToFillWhenEmpty: (keyof Config)[] = ["HTTPS_PROXY"];
+const configKeysToFillWhenEmpty: (keyof Config)[] = [
+  "HTTPS_PROXY",
+  "BORED_HTTPS_PROXY",
+];
 
 function getBoredAgentUrl(
   AUTO_UPDATE_URL: string | undefined,

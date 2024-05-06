@@ -30,7 +30,7 @@
     "typescript": "^4.5.5"
   },
   "dependencies": {
-    "@kubernetes/client-node": "^0.15.1",
+    "@kubernetes/client-node": "^0.21.0",
     "bored-mplex": "^0.1.3",
     "got": "^11.8.5",
     "http-parser-js": "^0.5.5",

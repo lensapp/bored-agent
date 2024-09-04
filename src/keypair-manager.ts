@@ -1,5 +1,6 @@
 import { generateKeyPair } from "crypto";
 import { K8sClient } from "./k8s-client";
+import { ServiceAccountTokenProvider } from "./service-account-token";
 
 export type KeyPair = {
   private: string;
@@ -25,9 +26,9 @@ export class KeyPairManager {
   private namespace: string;
   private apiClient: K8sClient;
 
-  constructor(namespace: string, client: K8sClient = new K8sClient()) {
+  constructor(namespace: string, serviceAccountTokenProvider: ServiceAccountTokenProvider, client?: K8sClient) {
     this.namespace = namespace;
-    this.apiClient = client;
+    this.apiClient = client ?? new K8sClient(serviceAccountTokenProvider);
   }
 
   protected async fetchExistingKeys(): Promise<KeyPair> {

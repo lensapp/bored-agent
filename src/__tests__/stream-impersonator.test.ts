@@ -63,13 +63,12 @@ MwIDAQAB
 
   beforeEach(() => {
     stream = new PassThrough();
-    parser = new StreamImpersonator();
+    parser = new StreamImpersonator(() => "service-account-token");
     destination = new DummyWritable();
   });
 
   it ("impersonates on valid jwt token", async () => {
     parser.boredServer = boredServer;
-    parser.saToken = "service-account-token";
     parser.publicKey = jwtPublicKey;
 
     const token = jwt.sign({
@@ -86,7 +85,6 @@ MwIDAQAB
 
   it ("impersonates groups on valid jwt token", async () => {
     parser.boredServer = boredServer;
-    parser.saToken = "service-account-token";
     parser.publicKey = jwtPublicKey;
 
     const token = jwt.sign({
@@ -104,7 +102,6 @@ MwIDAQAB
 
   it ("skips impersonation if tokens contains crlf-whitespace with trailing data", async () => {
     parser.boredServer = boredServer;
-    parser.saToken = "service-account-token";
     parser.publicKey = jwtPublicKey;
 
     const token = jwt.sign({
@@ -123,7 +120,6 @@ MwIDAQAB
 
   it ("does not remove crlf+whitespace from body", async () => {
     parser.boredServer = boredServer;
-    parser.saToken = "service-account-token";
     parser.publicKey = jwtPublicKey;
 
     const token = jwt.sign({
@@ -142,7 +138,6 @@ MwIDAQAB
 
   it ("handles newline splitted to separate chunks", async () => {
     parser.boredServer = boredServer;
-    parser.saToken = "service-account-token";
     parser.publicKey = jwtPublicKey;
 
     const token = jwt.sign({
@@ -159,7 +154,6 @@ MwIDAQAB
 
   it ("handles http request pipelining", async () => {
     parser.boredServer = boredServer;
-    parser.saToken = "service-account-token";
     parser.publicKey = jwtPublicKey;
 
     const token = jwt.sign({
@@ -183,7 +177,6 @@ MwIDAQAB
 
   it ("handles body separator splitted to separate chunks", async () => {
     parser.boredServer = boredServer;
-    parser.saToken = "service-account-token";
     parser.publicKey = jwtPublicKey;
 
     const token = jwt.sign({
@@ -202,7 +195,6 @@ MwIDAQAB
 
   it ("handles non GET pipelined requests", async () => {
     parser.boredServer = boredServer;
-    parser.saToken = "service-account-token";
     parser.publicKey = jwtPublicKey;
 
     const token = jwt.sign({
@@ -237,7 +229,6 @@ MwIDAQAB
 
   it ("handles port-forward upgrade", async () => {
     parser.boredServer = boredServer;
-    parser.saToken = "service-account-token";
     parser.publicKey = jwtPublicKey;
 
     const token = jwt.sign({
@@ -259,7 +250,6 @@ MwIDAQAB
   });
 
   it("does not impersonate on invalid token", async () => {
-    parser.saToken = "service-account-token";
     parser.publicKey = jwtPublicKey;
 
     stream.pipe(parser).pipe(destination);
@@ -274,7 +264,6 @@ MwIDAQAB
 
   it("does not impersonate if token.aud is mismatch", async () => {
     parser.boredServer = "aud_one";
-    parser.saToken = "service-account-token";
     parser.publicKey = jwtPublicKey;
 
     const token = jwt.sign({
@@ -289,7 +278,6 @@ MwIDAQAB
 
   it("does not impersonate if token is expired", async () => {
     parser.boredServer = "aud_one";
-    parser.saToken = "service-account-token";
     parser.publicKey = jwtPublicKey;
 
     const token = jwt.sign({
@@ -310,7 +298,6 @@ MwIDAQAB
     "imPersonate-uSer: admin"
   ])("rejects impersonate header %p from the client", (injectedHeader) => {
     parser.boredServer = boredServer;
-    parser.saToken = "service-account-token";
     parser.publicKey = jwtPublicKey;
 
     const token = jwt.sign({

@@ -3,9 +3,13 @@ import { HttpsProxyAgent } from "https-proxy-agent";
 import { AgentProxy } from "../agent-proxy";
 import { PassThrough } from "stream";
 import { Stream } from "bored-mplex";
+import { ServiceAccountTokenProvider } from "../service-account-token";
 
 describe("AgentProxy", () => {
   const OLD_ENV = process.env;
+  const serviceAccountTokenProviderMock = {
+    getSaToken: () => "service-account-token"
+  } as ServiceAccountTokenProvider;
   let agent: AgentProxy;
   let connect: any;
 
@@ -23,7 +27,9 @@ describe("AgentProxy", () => {
       boredServer: "https://bored.acme.org",
       boredToken: "foo.bar.baz",
       idpPublicKey: "this-is-not-valid"
-    }, { 
+    },
+    serviceAccountTokenProviderMock,
+    { 
       tlsConnect: connect,
       fileExists: jest.fn(() => false),
       readFile: jest.fn(),
@@ -87,7 +93,9 @@ describe("AgentProxy", () => {
           boredServer: "https://bored.acme.org",
           boredToken: "foo.bar.baz",
           idpPublicKey: "this-is-not-valid"
-        }, { 
+        },
+        serviceAccountTokenProviderMock,
+        { 
           tlsConnect: connect,
           fileExists: jest.fn(() => true),
           readFile: jest.fn(() => Buffer.from("fake-ca") as any),
@@ -113,7 +121,9 @@ describe("AgentProxy", () => {
           boredServer: "https://bored.acme.org",
           boredToken: "foo.bar.baz",
           idpPublicKey: "this-is-not-valid"
-        }, { 
+        },
+        serviceAccountTokenProviderMock,
+        { 
           tlsConnect: connect,
           fileExists: jest.fn(() => false),
           readFile: jest.fn(),

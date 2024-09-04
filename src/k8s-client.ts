@@ -1,10 +1,10 @@
-import got, { Headers } from "got";
+import got from "got";
 import * as fs from "fs/promises";
+import { ServiceAccountTokenProvider } from "./service-account-token";
 
 export const kubernetesHost = process.env.KUBERNETES_HOST || "kubernetes.default.svc";
 export const kubernetesPort = parseInt(process.env.KUBERNETES_SERVICE_PORT || "443");
 export const caCert = process.env.CA_CERT || "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt";
-export const serviceAccountTokenPath = process.env.SERVICEACCOUNT_TOKEN_PATH || "/var/run/secrets/kubernetes.io/serviceaccount/token";
 
 export type ErrorResponse = {
   status: number,
@@ -23,18 +23,22 @@ export class K8sError extends Error {
 }
 
 export class K8sClient {
-  private serviceAccountToken = "";
   private caCert = "";
-  private headers: Headers = {};
+  private serviceAccountTokenProvider: ServiceAccountTokenProvider;
 
-  async init() {
-    this.serviceAccountToken = (await fs.readFile(serviceAccountTokenPath)).toString();
-    this.caCert = (await fs.readFile(caCert)).toString();
+  constructor(serviceAccountTokenProvider: ServiceAccountTokenProvider) {
+    this.serviceAccountTokenProvider = serviceAccountTokenProvider;
+  }
 
-    this.headers = {
-      "Authorization": `Bearer ${this.serviceAccountToken}`,
+  getHeaders() {
+    return {
+      "Authorization": `Bearer ${this.serviceAccountTokenProvider.getSaToken()}`,
       "Accept": "application/json"
     };
+  }
+
+  async init() {
+    this.caCert = (await fs.readFile(caCert)).toString();
   }
 
   private getUrl(path: string) {
@@ -45,7 +49,7 @@ export class K8sClient {
     const response = await got.get(this.getUrl(path), {
       headers: {
         ...headers,
-        ...this.headers,
+        ...this.getHeaders(),
       },
       https: {
         certificateAuthority: this.caCert
@@ -64,7 +68,7 @@ export class K8sClient {
   async patch<T>(path: string, obj: Object, headers = {}) {
     const response = await got.patch(this.getUrl(path), {
       headers: {
-        ...this.headers,
+        ...this.getHeaders(),
         ...headers
       },
       https: {

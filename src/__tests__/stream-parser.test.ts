@@ -2,10 +2,15 @@ import { StreamParser } from "../stream-parser";
 import { PassThrough } from "stream";
 import { KeyPairManager } from "../keypair-manager";
 import { publicEncrypt, randomBytes } from "crypto";
+import { ServiceAccountTokenProvider } from "../service-account-token";
 
 describe("StreamParser", () => {
-  it ("parses bored header", async () => {
-    const keyPairManager = new KeyPairManager("default");
+  const serviceAccountTokenProviderMock = {
+    getSaToken: () => "service-account-token"
+  } as ServiceAccountTokenProvider;
+
+  it("parses bored header", async () => {
+    const keyPairManager = new KeyPairManager("default", serviceAccountTokenProviderMock);
     const stream = new PassThrough();
     const parser = new StreamParser();
     const keys = await keyPairManager.generateKeys();
@@ -29,7 +34,7 @@ describe("StreamParser", () => {
   });
 
   it ("ignores invalid header value", async () => {
-    const keyPairManager = new KeyPairManager("default");
+    const keyPairManager = new KeyPairManager("default", serviceAccountTokenProviderMock);
     const stream = new PassThrough();
     const parser = new StreamParser();
     const keys = await keyPairManager.generateKeys();

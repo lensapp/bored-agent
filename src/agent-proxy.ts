@@ -11,6 +11,7 @@ import { StreamParser } from "./stream-parser";
 import { StreamImpersonator } from "./stream-impersonator";
 import logger from "./logger";
 import { kubernetesPort, kubernetesHost } from "./k8s-client";
+import { ServiceAccountTokenProvider } from "./service-account-token";
 
 export type AgentProxyOptions = {
   boredServer: string;
@@ -29,7 +30,6 @@ export type StreamHeader = {
 };
 
 const caCert = process.env.CA_CERT || "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt";
-const serviceAccountTokenPath = process.env.SERVICEACCOUNT_TOKEN_PATH || "/var/run/secrets/kubernetes.io/serviceaccount/token";
 
 export class AgentProxy {
   private boredServer: string;
@@ -42,12 +42,13 @@ export class AgentProxy {
   private tlsSession?: Buffer;
   private keys?: KeyPair;
   private retryTimeout?: NodeJS.Timeout;
-  private serviceAccountToken?: Buffer;
   private tlsSockets: tls.TLSSocket[] = [];
+  private serviceAccountTokenProvider: ServiceAccountTokenProvider;
   private dependencies: AgentProxyDependencies;
 
   constructor(
-    opts: AgentProxyOptions, 
+    opts: AgentProxyOptions,
+    serviceAccountTokenProvider: ServiceAccountTokenProvider,
     dependencies: AgentProxyDependencies = { 
       tlsConnect: tls.connect,
       fileExists: fs.existsSync,
@@ -63,9 +64,7 @@ export class AgentProxy {
       this.caCert = this.dependencies.readFile(caCert);
     }
 
-    if (this.dependencies.fileExists(serviceAccountTokenPath)) {
-      this.serviceAccountToken = this.dependencies.readFile(serviceAccountTokenPath);
-    }
+    this.serviceAccountTokenProvider = serviceAccountTokenProvider;
   }
 
   init(keys: KeyPair) {
@@ -311,12 +310,11 @@ export class AgentProxy {
         const decipher = createDecipheriv(this.cipherAlgorithm, key, iv);
         const cipher = createCipheriv(this.cipherAlgorithm, key, iv);
 
-        if (this.serviceAccountToken && this.idpPublicKey !== "") {
-          const streamImpersonator = new StreamImpersonator();
+        if (this.serviceAccountTokenProvider.getSaToken() && this.idpPublicKey !== "") {
+          const streamImpersonator = new StreamImpersonator(() => this.serviceAccountTokenProvider.getSaToken() as string);
 
           streamImpersonator.publicKey = this.idpPublicKey;
           streamImpersonator.boredServer = this.boredServer;
-          streamImpersonator.saToken = this.serviceAccountToken.toString();
           parser.pipe(decipher).pipe(streamImpersonator).pipe(socket).pipe(cipher).pipe(stream);
         } else {
           parser.pipe(decipher).pipe(socket).pipe(cipher).pipe(stream);

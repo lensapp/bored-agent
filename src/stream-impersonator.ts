@@ -13,16 +13,21 @@ type TokenPayload = {
 
 type Headers = Array<Array<string>>;
 
+type GetSaToken = () => string;
+
 export class StreamImpersonator extends Transform {
   public boredServer = "";
   public publicKey = "";
-  public saToken = "";
+
   private chunks: Buffer[] = [];
   private httpParser: HTTPParserJS;
   private upgrade = false;
+  private getSaToken: GetSaToken;
 
-  constructor() {
+  constructor(getSaToken: GetSaToken) {
     super();
+
+    this.getSaToken = getSaToken;
 
     this.httpParser = new HTTPParser("REQUEST");
 
@@ -116,9 +121,10 @@ export class StreamImpersonator extends Transform {
         audience: [this.boredServer]
       }) as TokenPayload;
 
-      headers.splice(authIndex, 1); // remove existing authorization header
+      // remove existing authorization header
+      headers.splice(authIndex, 1);
 
-      headers.push(["authorization", `Bearer ${this.saToken}`]);
+      headers.push(["authorization", `Bearer ${this.getSaToken()}`]);
       headers.push(["impersonate-user", tokenData.sub]);
 
       tokenData?.groups?.forEach((group) => {

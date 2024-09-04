@@ -2,6 +2,8 @@ import { AgentProxy } from "./src/agent-proxy";
 import { KeyPairManager } from "./src/keypair-manager";
 import { version } from "./package.json";
 import logger from "./src/logger";
+import { serviceAccountTokenPath, ServiceAccountTokenProvider } from "./src/service-account-token";
+import { existsSync } from "fs";
 
 process.title = "bored-agent";
 
@@ -24,13 +26,16 @@ if (!namespace) {
   process.exit(1);
 }
 
+const serviceAccountFileExists = existsSync(serviceAccountTokenPath);
+const serviceAccountTokenProvider = new ServiceAccountTokenProvider(serviceAccountFileExists);
+
 const proxy = new AgentProxy({
   boredServer,
   boredToken,
   idpPublicKey
-});
+}, serviceAccountTokenProvider);
 
-const keyPairManager = new KeyPairManager(namespace);
+const keyPairManager = new KeyPairManager(namespace, serviceAccountTokenProvider);
 
 keyPairManager.ensureKeys().then((keys) => {
   proxy.init(keys);

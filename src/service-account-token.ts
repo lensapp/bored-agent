@@ -1,4 +1,5 @@
 import { readFileSync } from "fs";
+import logger from "./logger";
 
 export const serviceAccountTokenPath = process.env.SERVICEACCOUNT_TOKEN_PATH || "/var/run/secrets/kubernetes.io/serviceaccount/token";
 
@@ -81,7 +82,7 @@ export class ServiceAccountTokenProvider {
 
   private refreshTokenIfNeeded() {
     if (!this.getSaToken() || this.isTokenExpiredSoon()) {
-      console.log("Refreshing Service Account Token now");
+      logger.info("[SERVICE-ACCOUNT] Refreshing Service Account Token now");
       this.refreshToken();
     }
   }
@@ -89,7 +90,7 @@ export class ServiceAccountTokenProvider {
   private refreshToken() {
     const token = this.dependencies.readFileSync(serviceAccountTokenPath);
 
-    console.log("Service Account Token refreshed");
+    logger.info("[SERVICE-ACCOUNT] Service Account Token refreshed");
 
     this.saToken = token.toString();
   }

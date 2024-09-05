@@ -1,12 +1,11 @@
-name: Build
+name: Build Tag
 
 on:
-  push:
-    branches:
-      - main
+  create:
 
 jobs:
   images:
+    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -16,7 +15,7 @@ jobs:
         id: prep
         run: |
           DOCKER_IMAGE=quay.io/k8slens/bored-agent
-          VERSION=latest
+          VERSION=${GITHUB_REF#refs/tags/v}
           SHORTREF=${GITHUB_SHA::8}
 
           TAGS="${DOCKER_IMAGE}:${VERSION},${DOCKER_IMAGE}:${SHORTREF}"

@@ -1,8 +1,21 @@
 import * as k8s from "@kubernetes/client-node";
-import type { KubeConfig } from "@kubernetes/client-node";
+import type { KubeConfig, KubernetesObject, V1ObjectMeta } from "@kubernetes/client-node";
 import type { Got } from "got";
 import isUrl from "is-url";
 import yaml, { Scalar } from "yaml";
+
+/**
+ * KubernetesObject with metadata.name as required field, as opposed to the V1ObjectMeta interface
+ * which has them as optional fields. KubernetesObjectHeader requires non optional field for name.
+ * KubernetesObjectApi.read takes KubernetesObjectHeader as input.
+ *
+ * @see https://github.com/kubernetes-client/javascript/issues/367#issuecomment-2322098513
+ */
+export type KubernetesObjectWithMetadata = KubernetesObject & {
+  metadata: V1ObjectMeta & {
+    name: string;
+  };
+};
 
 /**
  * Replicate the functionality of `kubectl apply`.  That is, create the resources defined in the `specString` if they do
@@ -19,7 +32,7 @@ export async function applyBoredAgentYml(
 ): Promise<k8s.KubernetesObject[]> {
   console.log("Applying bored-agent.yml...");
   const client = k8s.KubernetesObjectApi.makeApiClient(kc);
-  const specs = k8s.loadAllYaml(specString) as k8s.KubernetesObject[];
+  const specs = k8s.loadAllYaml(specString) as KubernetesObjectWithMetadata[];
   const validSpecs = specs.filter((spec) => spec && spec.kind && spec.metadata);
   const created: k8s.KubernetesObject[] = [];
 

@@ -86,7 +86,7 @@ accept-encoding: gzip
 authorization: Bearer service-account-token
 impersonate-user: johndoe
 
-{\\"apiVersion\\":\\"authorization.k8s.io/v1\\",\\"kind\\":\\"SelfSubjectAccessReview\\",\\"spec\\":{\\"resourceAttributes\\":{\\"namespace\\":\\"kube-system\\",\\"resource\\":\\"*\\",\\"verb\\":\\"create\\"}}}"
+{"apiVersion":"authorization.k8s.io/v1","kind":"SelfSubjectAccessReview","spec":{"resourceAttributes":{"namespace":"kube-system","resource":"*","verb":"create"}}}"
 `;
 
 exports[`StreamImpersonator handles port-forward upgrade 1`] = `

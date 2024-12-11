@@ -23,7 +23,7 @@ metadata:
   name: bored-agent-updater
   namespace: lens-platform
 spec:
-  schedule: \\"@hourly\\"
+  schedule: "@hourly"
   jobTemplate:
     spec:
       template:

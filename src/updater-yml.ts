@@ -6,11 +6,11 @@ import yaml, { Scalar } from "yaml";
 
 /**
  * KubernetesObject with metadata.name as required field, as opposed to the V1ObjectMeta interface
- * which has them as optional fields. KubernetesObjectHeader requires non optional field for name.
+ * which has it as optional field. KubernetesObjectHeader requires non optional field for name and
  * KubernetesObjectApi.read takes KubernetesObjectHeader as input.
  *
  * @see https://github.com/kubernetes-client/javascript/issues/367#issuecomment-2322098513
- */
+*/
 export type KubernetesObjectWithMetadata = KubernetesObject & {
   metadata: V1ObjectMeta & {
     name: string;

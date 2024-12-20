@@ -38,7 +38,12 @@ export async function applyBoredAgentYml(
     try {
       // Try to get the resource, if it does not exist an error will be thrown and we will end up in the catch
       // block.
-      await client.read(spec);
+      const metadata = {
+        name: spec.metadata?.name ?? "",
+        namespace: spec.metadata?.namespace ?? "default"
+      };
+
+      await client.read({ ...spec, metadata });
       // We got the resource, so it exists, so patch it
       const response = await client.patch(spec);
 

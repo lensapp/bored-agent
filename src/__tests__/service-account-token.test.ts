@@ -74,7 +74,7 @@ describe("service-account-token", () => {
         it("returns the second token after refresh", () => {
           // First, current time is significantly before expiry of the first token
           jest
-            .useFakeTimers("modern")
+            .useFakeTimers()
             .setSystemTime(new Date(firstExp * 1000 - 600000));
 
           const provider = new ServiceAccountTokenProvider(true, {
@@ -93,7 +93,7 @@ describe("service-account-token", () => {
         it("returns the second token after refresh", () => {
           // First, current time is significantly before expiry of the first token
           jest
-            .useFakeTimers("modern")
+            .useFakeTimers()
             .setSystemTime(new Date(firstExp * 1000 - 600000));
 
           const provider = new ServiceAccountTokenProvider(true, {
@@ -121,7 +121,7 @@ describe("service-account-token", () => {
     describe("token is expired", () => {
       beforeEach(() => {
         jest
-          .useFakeTimers("modern")
+          .useFakeTimers()
           .setSystemTime(new Date(tokenExpiryTimeMs + 600000));
       });
 
@@ -133,7 +133,7 @@ describe("service-account-token", () => {
     describe("token is not expired", () => {
       beforeEach(() => {
         jest
-          .useFakeTimers("modern")
+          .useFakeTimers()
           .setSystemTime(new Date(tokenExpiryTimeMs - 600000));
       });
 
@@ -145,7 +145,7 @@ describe("service-account-token", () => {
     describe("threshold is 2s, current time 1s before expiry", () => {
       beforeEach(() => {
         jest
-          .useFakeTimers("modern")
+          .useFakeTimers()
           .setSystemTime(new Date(tokenExpiryTimeMs - 1000));
       });
 
@@ -157,7 +157,7 @@ describe("service-account-token", () => {
     describe("threshold is 0s, current time 1s before expiry", () => {
       beforeEach(() => {
         jest
-          .useFakeTimers("modern")
+          .useFakeTimers()
           .setSystemTime(new Date(tokenExpiryTimeMs - 1000));
       });
 
@@ -169,7 +169,7 @@ describe("service-account-token", () => {
     describe("threshold is 2s, current time 1s after expiry", () => {
       beforeEach(() => {
         jest
-          .useFakeTimers("modern")
+          .useFakeTimers()
           .setSystemTime(new Date(tokenExpiryTimeMs + 1000));
       });
 

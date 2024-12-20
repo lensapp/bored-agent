@@ -43,7 +43,7 @@ export async function applyBoredAgentYml(
       const response = await client.patch(spec);
 
       created.push(response.body);
-    } catch (e: any) {
+    } catch {
       // We did not get the resource, so it does not exist, so create it
       const response = await client.create(spec);
 

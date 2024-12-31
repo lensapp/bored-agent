@@ -23,6 +23,7 @@ export class StreamImpersonator extends Transform {
   private httpParser: HTTPParserJS;
   private upgrade = false;
   private getSaToken: GetSaToken;
+  private partialMessage: string = "";
 
   constructor(getSaToken: GetSaToken) {
     super();
@@ -72,8 +73,12 @@ export class StreamImpersonator extends Transform {
       return 0;
     };
 
-    this.httpParser.onBody = () => {
-      this.flushChunks();
+    this.httpParser.onBody = (
+      bodyChunk: Buffer,
+      start: number,
+      len: number,
+    ) => {
+      this.chunks.push(bodyChunk.subarray(start, start + len));
     };
 
     this.httpParser.onMessageComplete = () => {
@@ -82,8 +87,10 @@ export class StreamImpersonator extends Transform {
   }
 
   private flushChunks() {
-    this.push(Buffer.concat(this.chunks));
-    this.chunks = [];
+    if (this.chunks.length > 0) {
+      this.push(Buffer.concat(this.chunks));
+      this.chunks = [];
+    }
   }
 
   _final(callback: TransformCallback): void {
@@ -91,15 +98,42 @@ export class StreamImpersonator extends Transform {
     callback();
   }
 
-  _transform(chunk: Buffer, encoding: BufferEncoding, callback: TransformCallback): void {
+  _transform(
+    chunk: Buffer,
+    encoding: BufferEncoding,
+    callback: TransformCallback,
+  ): void {
+    const chunkStr = chunk.toString();
+
     if (this.upgrade) {
       this.push(chunk);
-    } else {
-      this.chunks.push(chunk);
-      this.httpParser.execute(chunk);
+
+      return callback();
     }
 
-    return callback();
+    this.partialMessage += chunkStr;
+
+    const handleError = (err: Error) => {
+      this.partialMessage = "";
+      logger.error("[IMPERSONATOR] Error parsing HTTP data: %s", String(err));
+      throw err;
+    };
+
+    try {
+      const bytesParsed = this.httpParser.execute(
+        Buffer.from(this.partialMessage),
+      );
+
+      if (bytesParsed instanceof Error) {
+        return handleError(bytesParsed);
+      }
+
+      this.partialMessage = this.partialMessage.slice(bytesParsed);
+    } catch (err) {
+      return handleError(err as Error);
+    }
+
+    callback();
   }
 
   validateRequestHeaders(headers: Headers) {

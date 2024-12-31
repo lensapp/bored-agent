@@ -131,9 +131,10 @@ MwIDAQAB
 
     stream.pipe(parser).pipe(destination);
     stream.write(`GET / HTTP/1.1\r\nAccept: application/json\r\nContent-`);
-    stream.write(`Type: application/json\r\nAuthorization: Bearer ${token}\r\n trailing-data\r\nCache-Control: max-age=0\r\n\r\nfoo\r\n bar`);
+    stream.write(`Type: application/json\r\nAuthorization: Bearer ${token}\r\nCache-Control: max-age=0\r\nContent-Length: 8\r\n\r\nfoo\r\nbar`);
 
-    expect(destination.buffer.toString().includes(`\r\n\r\nfoo\r\n bar`));
+    expect(destination.buffer.toString()).toMatchSnapshot();
+    expect(destination.buffer.toString()).toContain(`foo\r\nbar`);
   });
 
   it ("handles newline splitted to separate chunks", async () => {
@@ -150,6 +151,61 @@ MwIDAQAB
     stream.write(`GET / HTTP/1.1\r\nAccept: application/json\r`);
     stream.write(`\nContent-Type: application/json\r\nAuthorization: Bearer ${token}\r\n\r\n`);
     expect(destination.buffer.toString()).toMatchSnapshot();
+  });
+
+  it ("handles all body and headers splitted to separate chunks", async () => {
+    parser.boredServer = boredServer;
+    parser.publicKey = jwtPublicKey;
+
+    const token = jwt.sign({
+      exp: Math.floor(Date.now() / 1000) + (60 * 60),
+      sub: "johndoe",
+      aud: [boredServer]
+    }, jwtPrivateKey, { algorithm: "RS256" });
+
+    stream.pipe(parser).pipe(destination);
+    stream.write("POST / HTTP/1.1\r\n");
+    stream.write("Accept: application/json\r\n");
+    stream.write(`Authorization: Bearer ${token}\r\n`);
+    stream.write("Content-Type: application/json\r\nContent-Length: 24\r\n\r\n");
+    stream.write("first chunk");
+    stream.write(" second chunk");
+    expect(destination.buffer.toString()).toMatchSnapshot();
+    expect(destination.buffer.toString()).toContain("first chunk second chunk");
+  });
+
+  it ("handles headers in one chunk, body in another", () => {
+    parser.boredServer = boredServer;
+    parser.publicKey = jwtPublicKey;
+
+    const token = jwt.sign({
+      exp: Math.floor(Date.now() / 1000) + (60 * 60),
+      sub: "johndoe",
+      aud: [boredServer]
+    }, jwtPrivateKey, { algorithm: "RS256" });
+
+    stream.pipe(parser).pipe(destination);
+    stream.write(`POST / HTTP/1.1\r\nAccept: application/json\r\nAuthorization: Bearer ${token}\r\nContent-Type: application/json\r\nContent-Length: 24\r\n\r\n`);
+    stream.write("first chunk");
+    stream.write(" second chunk");
+    expect(destination.buffer.toString()).toMatchSnapshot();
+    expect(destination.buffer.toString()).toContain("first chunk second chunk");
+  });
+
+  it ("handles headers and body in same stream chunk", async () => {
+    parser.boredServer = boredServer;
+    parser.publicKey = jwtPublicKey;
+
+    const token = jwt.sign({
+      exp: Math.floor(Date.now() / 1000) + (60 * 60),
+      sub: "johndoe",
+      aud: [boredServer]
+    }, jwtPrivateKey, { algorithm: "RS256" });
+
+    stream.pipe(parser).pipe(destination);
+    stream.write(`POST / HTTP/1.1\r\nAccept: application/json\r\nAuthorization: Bearer ${token}\r\nContent-Type: application/json\r\nContent-Length: 24\r\n\r\nfirst chunk second chunk`);
+    expect(destination.buffer.toString()).toMatchSnapshot();
+    expect(destination.buffer.toString()).toContain("first chunk second chunk");
   });
 
   it ("handles http request pipelining", async () => {

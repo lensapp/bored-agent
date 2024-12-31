@@ -10,6 +10,32 @@ content-length: 11
 hello world"
 `;
 
+exports[`StreamImpersonator does not remove crlf+whitespace from body 1`] = `
+"GET / HTTP/1.1
+accept: application/json
+content-type: application/json
+cache-control: max-age=0
+content-length: 8
+authorization: Bearer service-account-token
+impersonate-user: johndoe
+impersonate-group: dev
+impersonate-group: ops
+
+foo
+bar"
+`;
+
+exports[`StreamImpersonator handles all body and headers splitted to separate chunks 1`] = `
+"POST / HTTP/1.1
+accept: application/json
+content-type: application/json
+content-length: 24
+authorization: Bearer service-account-token
+impersonate-user: johndoe
+
+first chunk second chunk"
+`;
+
 exports[`StreamImpersonator handles body separator splitted to separate chunks 1`] = `
 "GET / HTTP/1.1
 accept: application/json
@@ -18,6 +44,28 @@ authorization: Bearer service-account-token
 impersonate-user: johndoe
 
 "
+`;
+
+exports[`StreamImpersonator handles headers and body in same stream chunk 1`] = `
+"POST / HTTP/1.1
+accept: application/json
+content-type: application/json
+content-length: 24
+authorization: Bearer service-account-token
+impersonate-user: johndoe
+
+first chunk second chunk"
+`;
+
+exports[`StreamImpersonator handles headers in one chunk, body in another 1`] = `
+"POST / HTTP/1.1
+accept: application/json
+content-type: application/json
+content-length: 24
+authorization: Bearer service-account-token
+impersonate-user: johndoe
+
+first chunk second chunk"
 `;
 
 exports[`StreamImpersonator handles http request pipelining 1`] = `

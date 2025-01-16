@@ -23,7 +23,6 @@ export class StreamImpersonator extends Transform {
   private httpParser: HTTPParserJS;
   private upgrade = false;
   private getSaToken: GetSaToken;
-  private partialMessage: string = "";
 
   constructor(getSaToken: GetSaToken) {
     super();
@@ -103,6 +102,7 @@ export class StreamImpersonator extends Transform {
     encoding: BufferEncoding,
     callback: TransformCallback,
   ): void {
+    let partialMessage = "";
     const chunkStr = chunk.toString();
 
     if (this.upgrade) {
@@ -111,24 +111,22 @@ export class StreamImpersonator extends Transform {
       return callback();
     }
 
-    this.partialMessage += chunkStr;
+    partialMessage += chunkStr;
 
     const handleError = (err: Error) => {
-      this.partialMessage = "";
+      partialMessage = "";
       logger.error("[IMPERSONATOR] Error parsing HTTP data: %s", String(err));
       throw err;
     };
 
     try {
       const bytesParsed = this.httpParser.execute(
-        Buffer.from(this.partialMessage),
+        Buffer.from(partialMessage),
       );
 
       if (bytesParsed instanceof Error) {
         return handleError(bytesParsed);
       }
-
-      this.partialMessage = this.partialMessage.slice(bytesParsed);
     } catch (err) {
       return handleError(err as Error);
     }

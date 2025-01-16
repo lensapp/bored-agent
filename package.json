@@ -1,6 +1,6 @@
 {
   "name": "bored-agent",
-  "version": "0.12.2",
+  "version": "0.12.5",
   "description": "Bored Agent",
   "main": "dist/index.js",
   "author": "Mirantis Inc.",

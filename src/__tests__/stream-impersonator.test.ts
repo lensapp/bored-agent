@@ -16,6 +16,10 @@ class DummyWritable extends Writable {
   }
 }
 
+function delay(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 describe("StreamImpersonator", () => {
   const jwtPrivateKey = `-----BEGIN RSA PRIVATE KEY-----
 MIIEogIBAAKCAQEAnzyis1ZjfNB0bBgKFMSvvkTtwlvBsaJq7S5wA+kzeVOVpVWw
@@ -168,10 +172,45 @@ MwIDAQAB
     stream.write("Accept: application/json\r\n");
     stream.write(`Authorization: Bearer ${token}\r\n`);
     stream.write("Content-Type: application/json\r\nContent-Length: 24\r\n\r\n");
+    await delay(10);
     stream.write("first chunk");
+    await delay(10);
     stream.write(" second chunk");
     expect(destination.buffer.toString()).toMatchSnapshot();
     expect(destination.buffer.toString()).toContain("first chunk second chunk");
+  });
+
+  it("handles binary data in body", async () => {
+    parser.boredServer = boredServer;
+    parser.publicKey = jwtPublicKey;
+  
+    const token = jwt.sign(
+      {
+        exp: Math.floor(Date.now() / 1000) + 60 * 60,
+        sub: "johndoe",
+        aud: [boredServer],
+      },
+      jwtPrivateKey,
+      { algorithm: "RS256" }
+    );
+  
+    stream.pipe(parser).pipe(destination);
+  
+    // Writing the headers as text
+    stream.write("POST / HTTP/1.1\r\n");
+    stream.write("Accept: application/json\r\n");
+    stream.write(`Authorization: Bearer ${token}\r\n`);
+    stream.write("Content-Type: application/octet-stream\r\nContent-Length: 10\r\n\r\n");
+  
+    // Writing binary data as Buffer chunk
+    // Control characters: SOH,STX,ETX
+    // Ascii: Bar
+    // UTF8: Äö
+    stream.write(Buffer.from([0x01, 0x02, 0x03, 0x42, 0x61, 0x72, 0xC3, 0x84, 0xC3, 0xB6]));
+  
+    expect(destination.buffer.toString()).toMatchSnapshot();
+    expect(destination.buffer.toString()).toContain("BarÄö");
+    expect(destination.buffer.includes(Buffer.from([0x01, 0x02, 0x03, 0x42, 0x61, 0x72, 0xC3, 0x84, 0xC3, 0xB6]))).toBe(true);
   });
 
   it ("handles headers in one chunk, body in another", () => {

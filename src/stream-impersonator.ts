@@ -3,6 +3,7 @@ import { HTTPParser, HTTPParserJS } from "http-parser-js";
 import { chunk } from "lodash";
 import * as jwt from "jsonwebtoken";
 import logger from "./logger";
+import { removeBytesFromBuffersHead } from "./stream-utils";
 
 type TokenPayload = {
   exp: number;
@@ -23,7 +24,10 @@ export class StreamImpersonator extends Transform {
   private httpParser: HTTPParserJS;
   private upgrade = false;
   private getSaToken: GetSaToken;
-  private partialMessage: string = "";
+
+  // If the a chunk can't be parsed fully, unparsed bytes are saved to be passed
+  // when we receive the next chunk
+  private partialMessage: Buffer[] = [];
 
   constructor(getSaToken: GetSaToken) {
     super();
@@ -100,35 +104,32 @@ export class StreamImpersonator extends Transform {
 
   _transform(
     chunk: Buffer,
-    encoding: BufferEncoding,
+    _encoding: BufferEncoding,
     callback: TransformCallback,
   ): void {
-    const chunkStr = chunk.toString();
-
     if (this.upgrade) {
       this.push(chunk);
 
       return callback();
     }
 
-    this.partialMessage += chunkStr;
+    this.partialMessage.push(chunk);
 
     const handleError = (err: Error) => {
-      this.partialMessage = "";
+      this.partialMessage = [];
       logger.error("[IMPERSONATOR] Error parsing HTTP data: %s", String(err));
       throw err;
     };
 
     try {
-      const bytesParsed = this.httpParser.execute(
-        Buffer.from(this.partialMessage),
-      );
+      const bufferToParse = Buffer.concat(this.partialMessage);
+      const bytesParsed = this.httpParser.execute(bufferToParse);
 
       if (bytesParsed instanceof Error) {
         return handleError(bytesParsed);
       }
 
-      this.partialMessage = this.partialMessage.slice(bytesParsed);
+      this.partialMessage = removeBytesFromBuffersHead(this.partialMessage, bytesParsed);
     } catch (err) {
       return handleError(err as Error);
     }

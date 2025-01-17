@@ -47,6 +47,17 @@ impersonate-user: johndoe
 BarÄö"
 `;
 
+exports[`StreamImpersonator handles binary data in body one byte at a time 1`] = `
+"POST / HTTP/1.1
+accept: application/json
+content-type: application/octet-stream
+content-length: 4
+authorization: Bearer service-account-token
+impersonate-user: johndoe
+
+Äö"
+`;
+
 exports[`StreamImpersonator handles body separator splitted to separate chunks 1`] = `
 "GET / HTTP/1.1
 accept: application/json

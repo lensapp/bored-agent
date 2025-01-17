@@ -213,6 +213,62 @@ MwIDAQAB
     expect(destination.buffer.includes(Buffer.from([0x01, 0x02, 0x03, 0x42, 0x61, 0x72, 0xC3, 0x84, 0xC3, 0xB6]))).toBe(true);
   });
 
+  it("handles parse errors", () => {
+    parser.boredServer = boredServer;
+    parser.publicKey = jwtPublicKey;
+  
+    stream.pipe(parser).pipe(destination);
+  
+    // Writing the headers as text
+    stream.write("POST ");
+    stream.write("/");
+    stream.write(" HTTP/1.1");
+
+    expect(() => {
+      stream.write("\r\r\n\n");
+    }).toThrowError("Parse Error");
+  });
+
+  it("handles binary data in body one byte at a time", async () => {
+    parser.boredServer = boredServer;
+    parser.publicKey = jwtPublicKey;
+  
+    const token = jwt.sign(
+      {
+        exp: Math.floor(Date.now() / 1000) + 60 * 60,
+        sub: "johndoe",
+        aud: [boredServer],
+      },
+      jwtPrivateKey,
+      { algorithm: "RS256" }
+    );
+  
+    stream.pipe(parser).pipe(destination);
+  
+    // Writing the headers as text
+    stream.write("POST ");
+    stream.write("/");
+    stream.write(" HTTP/1.1");
+    stream.write("\r\n");
+    stream.write("Accept: application/json\r\n");
+    stream.write(`Authorization: Bearer ${token}\r\n`);
+    stream.write("Content-Type: application/octet-stream\r\nContent-Length: 4\r\n\r\n");
+  
+    // Writing binary data as four Buffer chunks
+    // UTF8: Äö
+    stream.write(Buffer.from([0xC3]));
+    await delay(1);
+    stream.write(Buffer.from([0x84]));
+    await delay(1);
+    stream.write(Buffer.from([0xC3]));
+    await delay(1);
+    stream.write(Buffer.from([0xB6]));
+  
+    expect(destination.buffer.toString()).toMatchSnapshot();
+    expect(destination.buffer.toString()).toContain("Äö");
+    expect(destination.buffer.includes(Buffer.from([0xC3, 0x84, 0xC3, 0xB6]))).toBe(true);
+  });
+
   it ("handles headers in one chunk, body in another", () => {
     parser.boredServer = boredServer;
     parser.publicKey = jwtPublicKey;

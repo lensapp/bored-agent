@@ -2,7 +2,7 @@ import { Transform, TransformCallback } from "stream";
 import { HTTPParser, HTTPParserJS } from "http-parser-js";
 import { chunk } from "lodash";
 import * as jwt from "jsonwebtoken";
-import logger from "./logger";
+import logger, { logLevel } from "./logger";
 import { removeBytesFromBuffersHead } from "./stream-utils";
 
 type TokenPayload = {
@@ -107,6 +107,10 @@ export class StreamImpersonator extends Transform {
     _encoding: BufferEncoding,
     callback: TransformCallback,
   ): void {
+    if (logLevel === "trace") {
+      console.log(chunk.toString("utf8"));
+    }
+
     if (this.upgrade) {
       this.push(chunk);
 

@@ -206,3 +206,31 @@ impersonate-user: johndoe
 
 "
 `;
+
+exports[`StreamImpersonator transfer encoding chunked 1`] = `
+"GET /version HTTP/1.1
+host: 127.0.0.1:53364
+user-agent: node-fetch
+accept: */*
+accept-encoding: gzip, deflate, br
+x-forwarded-for: 127.0.0.1
+authorization: Bearer service-account-token
+impersonate-user: johndoe
+impersonate-group: dev
+impersonate-group: ops
+
+POST /apis/authorization.k8s.io/v1/selfsubjectaccessreviews HTTP/1.1
+host: 127.0.0.1:53364
+user-agent: node-fetch
+transfer-encoding: chunked
+accept: */*
+accept-encoding: gzip, deflate, br
+content-type: application/json
+x-forwarded-for: 127.0.0.1
+authorization: Bearer service-account-token
+impersonate-user: johndoe
+impersonate-group: dev
+impersonate-group: ops
+
+{"spec":{"resourceAttributes":{"namespace":"kube-system","resource":"*","verb":"create"}},"kind":"SelfSubjectAccessReview","apiVersion":"authorization.k8s.io/v1","metadata":{}}"
+`;

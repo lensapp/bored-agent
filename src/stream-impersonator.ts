@@ -44,6 +44,7 @@ export class StreamImpersonator extends Transform {
       }
 
       this.push(`${info.method} ${info.url} HTTP/${info.versionMajor}.${info.versionMinor}\r\n`);
+      logger.trace(`onHeadersComplete: ${info.method} ${info.url} HTTP/${info.versionMajor}.${info.versionMinor}\r\n`);
 
       const headers = chunk(info.headers as unknown as string[], 2).map((val) => [val[0].trim().toLowerCase(), val[1]]) as Headers;
 
@@ -74,6 +75,10 @@ export class StreamImpersonator extends Transform {
 
       this.upgrade = info.upgrade || !!headers.find((h) => h[0] === "connection" && h[1].toLowerCase() === "upgrade");
 
+      if (this.upgrade) {
+        logger.trace("upgrade in onHeadersComplete");
+      }
+
       return 0;
     };
 
@@ -82,16 +87,21 @@ export class StreamImpersonator extends Transform {
       start: number,
       len: number,
     ) => {
+      logger.trace("onBody");
       this.chunks.push(bodyChunk.subarray(start, start + len));
     };
 
     this.httpParser.onMessageComplete = () => {
+      logger.trace("onMessageComplete");
       this.flushChunks();
     };
   }
 
   private flushChunks() {
+    logger.trace("flushChunks");
+
     if (this.chunks.length > 0) {
+      logger.trace("flushChunks -> writing chunks");
       this.push(Buffer.concat(this.chunks));
       this.chunks = [];
     }
@@ -112,6 +122,7 @@ export class StreamImpersonator extends Transform {
     }
 
     if (this.upgrade) {
+      logger.trace("upgrade in _transform");
       this.push(chunk);
 
       return callback();

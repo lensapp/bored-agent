@@ -122,7 +122,7 @@ MwIDAQAB
     expect(destination.buffer.toString().includes(`\r\nAuthorization: Bearer ${token} trailing-data\r\n`));
   });
 
-  it ("does not remove crlf+whitespace from body", async () => {
+  it("does not remove crlf+whitespace from body", async () => {
     parser.boredServer = boredServer;
     parser.publicKey = jwtPublicKey;
 
@@ -139,6 +139,43 @@ MwIDAQAB
 
     expect(destination.buffer.toString()).toMatchSnapshot();
     expect(destination.buffer.toString()).toContain(`foo\r\nbar`);
+  });
+
+  it("transfer encoding chunked", () => {
+    parser.boredServer = boredServer;
+    parser.publicKey = jwtPublicKey;
+
+    const token = jwt.sign({
+      exp: Math.floor(Date.now() / 1000) + (60 * 60),
+      sub: "johndoe",
+      groups: ["dev", "ops"],
+      aud: [boredServer]
+    }, jwtPrivateKey, { algorithm: "RS256" });
+
+    stream.pipe(parser).pipe(destination);
+    stream.write(`GET /version HTTP/1.1\r\n`);
+    stream.write(`Host: 127.0.0.1:53364\r\n`);
+    stream.write(`User-Agent: node-fetch\r\n`);
+    stream.write(`Accept: */*\r\n`);
+    stream.write(`Accept-Encoding: gzip, deflate, br\r\n`);
+    stream.write(`Authorization: Bearer ${token}\r\n`);
+    stream.write(`X-Forwarded-For: 127.0.0.1\r\n\r\n`);
+    stream.write(`POST /apis/authorization.k8s.io/v1/selfsubjectaccessreviews HTTP/1.1\r\n`);
+    stream.write(`Host: 127.0.0.1:53364\r\n`);
+    stream.write(`User-Agent: node-fetch\r\n`);
+    stream.write(`Transfer-Encoding: chunked\r\n`);
+    stream.write(`Accept: */*\r\n`);
+    stream.write(`Accept-Encoding: gzip, deflate, br\r\n`);
+    stream.write(`Authorization: Bearer ${token}\r\n`);
+    stream.write(`Content-Type: application/json\r\n`);
+    stream.write(`X-Forwarded-For: 127.0.0.1\r\n`);
+    stream.write(`\r\n`);
+    stream.write(`b0\r\n`);
+    stream.write(`{"spec":{"resourceAttributes":{"namespace":"kube-system","resource":"*","verb":"create"}},"kind":"SelfSubjectAccessReview","apiVersion":"authorization.k8s.io/v1","metadata":{}}\r\n`);
+    stream.write(`0\r\n`);
+    stream.write(`\r\n`);
+
+    expect(destination.buffer.toString()).toMatchSnapshot();
   });
 
   it ("handles newline splitted to separate chunks", async () => {
@@ -225,7 +262,7 @@ MwIDAQAB
     stream.write(" HTTP/1.1");
 
     expect(() => {
-      stream.write("\r\r\n\n");
+      stream.write("\r\n\r\n\r\r\n\n");
     }).toThrowError("Parse Error");
   });
 
@@ -287,7 +324,7 @@ MwIDAQAB
     expect(destination.buffer.toString()).toContain("first chunk second chunk");
   });
 
-  it ("handles headers and body in same stream chunk", async () => {
+  it("handles headers and body in same stream chunk", async () => {
     parser.boredServer = boredServer;
     parser.publicKey = jwtPublicKey;
 

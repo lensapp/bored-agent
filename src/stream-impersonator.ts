@@ -16,10 +16,13 @@ type Headers = Array<Array<string>>;
 
 type GetSaToken = () => string;
 
+const endOfHeadersMarker = `\r\n\r\n`;
+
 export class StreamImpersonator extends Transform {
   public boredServer = "";
   public publicKey = "";
 
+  private headersReceived = false;
   private chunks: Buffer[] = [];
   private httpParser: HTTPParserJS;
   private upgrade = false;
@@ -82,18 +85,10 @@ export class StreamImpersonator extends Transform {
       return 0;
     };
 
-    this.httpParser.onBody = (
-      bodyChunk: Buffer,
-      start: number,
-      len: number,
-    ) => {
-      logger.trace("onBody");
-      this.chunks.push(bodyChunk.subarray(start, start + len));
-    };
-
     this.httpParser.onMessageComplete = () => {
       logger.trace("onMessageComplete");
       this.flushChunks();
+      this.headersReceived = false;
     };
   }
 
@@ -101,7 +96,6 @@ export class StreamImpersonator extends Transform {
     logger.trace("flushChunks");
 
     if (this.chunks.length > 0) {
-      logger.trace("flushChunks -> writing chunks");
       this.push(Buffer.concat(this.chunks));
       this.chunks = [];
     }
@@ -110,6 +104,30 @@ export class StreamImpersonator extends Transform {
   _final(callback: TransformCallback): void {
     this.flushChunks();
     callback();
+  }
+
+  private handleError(error: Error) {
+    this.headersReceived = false;
+    this.partialMessage = [];
+    this.chunks = [];
+    logger.error("[IMPERSONATOR] Error parsing HTTP data: %s", String(error));
+
+    throw error;
+  };
+
+  private executeParser(bufferToParse: Buffer) {
+    try {
+      const bytesParsed = this.httpParser.execute(bufferToParse);
+
+      if (bytesParsed instanceof Error) {
+        return this.handleError(bytesParsed);
+      }
+
+      // Remove parsed bytes from the partialMessage buffers
+      this.partialMessage = removeBytesFromBuffersHead(this.partialMessage, bytesParsed);
+    } catch (error) {
+      this.handleError(error as Error);
+    }
   }
 
   _transform(
@@ -122,32 +140,39 @@ export class StreamImpersonator extends Transform {
     }
 
     if (this.upgrade) {
-      logger.trace("upgrade in _transform");
       this.push(chunk);
 
       return callback();
     }
 
+    this.chunks.push(chunk);
     this.partialMessage.push(chunk);
 
-    const handleError = (err: Error) => {
-      this.partialMessage = [];
-      logger.error("[IMPERSONATOR] Error parsing HTTP data: %s", String(err));
-      throw err;
-    };
+    const receivedSoFar = Buffer.concat(this.partialMessage);
+    const headerEndIndex = receivedSoFar.indexOf(endOfHeadersMarker);
 
-    try {
-      const bufferToParse = Buffer.concat(this.partialMessage);
-      const bytesParsed = this.httpParser.execute(bufferToParse);
-
-      if (bytesParsed instanceof Error) {
-        return handleError(bytesParsed);
-      }
-
-      this.partialMessage = removeBytesFromBuffersHead(this.partialMessage, bytesParsed);
-    } catch (err) {
-      return handleError(err as Error);
+    // Wait for more data if headers are incomplete and not received yet
+    if (headerEndIndex === -1 && !this.headersReceived) {
+      return callback();
     }
+
+    // Parse headers if not parsed yet
+    if (headerEndIndex !== -1 && !this.headersReceived) {
+      this.headersReceived = true;
+
+      // Extract headers
+      // +endOfHeadersMarker.length to include the \r\n\r\n in the header
+      const bufferToParse = Buffer.concat(this.partialMessage).subarray(0, headerEndIndex + endOfHeadersMarker.length);
+
+      this.executeParser(bufferToParse);
+
+      // onHeadersComplete sets this.chunks to [], we set the rest of the bytes after the header back
+      this.chunks = [Buffer.concat(this.partialMessage)];
+    }
+
+    const bufferToParse = Buffer.concat(this.partialMessage);
+  
+    this.executeParser(bufferToParse);
 
     callback();
   }

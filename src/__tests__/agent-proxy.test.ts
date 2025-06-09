@@ -14,8 +14,8 @@ describe("AgentProxy", () => {
   let connect: any;
 
   beforeEach(() => {
-    jest.resetModules();
-    connect = jest.fn((_opts: any, callback: () => void) => {
+    vi.resetModules();
+    connect = vi.fn((_opts: any, callback: () => void) => {
       process.nextTick(() => {
         callback();
       });
@@ -31,8 +31,8 @@ describe("AgentProxy", () => {
     serviceAccountTokenProviderMock,
     { 
       tlsConnect: connect,
-      fileExists: jest.fn(() => false),
-      readFile: jest.fn(),
+      fileExists: vi.fn(() => false),
+      readFile: vi.fn(),
     });
   });
 
@@ -97,8 +97,8 @@ describe("AgentProxy", () => {
         serviceAccountTokenProviderMock,
         { 
           tlsConnect: connect,
-          fileExists: jest.fn(() => true),
-          readFile: jest.fn(() => Buffer.from("fake-ca") as any),
+          fileExists: vi.fn(() => true),
+          readFile: vi.fn(() => Buffer.from("fake-ca") as any),
         });
       });
 
@@ -125,8 +125,8 @@ describe("AgentProxy", () => {
         serviceAccountTokenProviderMock,
         { 
           tlsConnect: connect,
-          fileExists: jest.fn(() => false),
-          readFile: jest.fn(),
+          fileExists: vi.fn(() => false),
+          readFile: vi.fn(),
         });
       });
 

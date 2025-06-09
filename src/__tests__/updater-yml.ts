@@ -1,10 +1,11 @@
 import path from "path";
 import { Config, fetchBoredAgentYml } from "../updater-yml";
 import fs from "fs";
+import { Mock, vi } from "vitest";
 
 describe("updater", () => {
   let config: Config;
-  let gotMock: jest.Mock;
+  let gotMock: Mock;
 
   beforeEach(() => {
     config = {
@@ -23,7 +24,7 @@ describe("updater", () => {
       path.join(__dirname, "./updater-mock.yml")
     );
 
-    gotMock = jest.fn().mockResolvedValue({ body: mockData.toString() });
+    gotMock = vi.fn().mockResolvedValue({ body: mockData.toString() });
   });
 
   it("parses yaml", async () => {

@@ -16,7 +16,7 @@ describe("service-account-token", () => {
     let readFileMock: typeof readFileSync;
 
     beforeEach(() => {
-      readFileMock = jest.fn().mockReturnValueOnce(firstToken).mockReturnValueOnce(secondToken);
+      readFileMock = vi.fn().mockReturnValueOnce(firstToken).mockReturnValueOnce(secondToken);
     });
 
     describe("getSaToken", () => {
@@ -73,7 +73,7 @@ describe("service-account-token", () => {
       describe("token has not expired", () => {
         it("returns the second token after refresh", () => {
           // First, current time is significantly before expiry of the first token
-          jest
+          vi
             .useFakeTimers()
             .setSystemTime(new Date(firstExp * 1000 - 600000));
 
@@ -92,7 +92,7 @@ describe("service-account-token", () => {
       describe("token has expired", () => {
         it("returns the second token after refresh", () => {
           // First, current time is significantly before expiry of the first token
-          jest
+          vi
             .useFakeTimers()
             .setSystemTime(new Date(firstExp * 1000 - 600000));
 
@@ -101,7 +101,7 @@ describe("service-account-token", () => {
           });
 
           // Advance time to right before expiry
-          jest.advanceTimersByTime(600000 - 1000);
+          vi.advanceTimersByTime(600000 - 1000);
 
           expect(
             JSON.parse(
@@ -120,7 +120,7 @@ describe("service-account-token", () => {
 
     describe("token is expired", () => {
       beforeEach(() => {
-        jest
+        vi
           .useFakeTimers()
           .setSystemTime(new Date(tokenExpiryTimeMs + 600000));
       });
@@ -132,7 +132,7 @@ describe("service-account-token", () => {
 
     describe("token is not expired", () => {
       beforeEach(() => {
-        jest
+        vi
           .useFakeTimers()
           .setSystemTime(new Date(tokenExpiryTimeMs - 600000));
       });
@@ -144,7 +144,7 @@ describe("service-account-token", () => {
 
     describe("threshold is 2s, current time 1s before expiry", () => {
       beforeEach(() => {
-        jest
+        vi
           .useFakeTimers()
           .setSystemTime(new Date(tokenExpiryTimeMs - 1000));
       });
@@ -156,7 +156,7 @@ describe("service-account-token", () => {
 
     describe("threshold is 0s, current time 1s before expiry", () => {
       beforeEach(() => {
-        jest
+        vi
           .useFakeTimers()
           .setSystemTime(new Date(tokenExpiryTimeMs - 1000));
       });
@@ -168,7 +168,7 @@ describe("service-account-token", () => {
 
     describe("threshold is 2s, current time 1s after expiry", () => {
       beforeEach(() => {
-        jest
+        vi
           .useFakeTimers()
           .setSystemTime(new Date(tokenExpiryTimeMs + 1000));
       });

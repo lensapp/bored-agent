@@ -45,14 +45,14 @@ export async function applyBoredAgentYml(
 
       await client.read({ ...spec, metadata });
       // We got the resource, so it exists, so patch it
-      const response = await client.patch(spec);
+      const k8sObject = await client.patch(spec);
 
-      created.push(response.body);
+      created.push(k8sObject);
     } catch {
       // We did not get the resource, so it does not exist, so create it
-      const response = await client.create(spec);
+      const k8sObject = await client.create(spec);
 
-      created.push(response.body);
+      created.push(k8sObject);
     }
   }
 

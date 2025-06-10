@@ -1,6 +1,6 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`StreamImpersonator does not impersonate on invalid token 1`] = `
+exports[`StreamImpersonator > does not impersonate on invalid token 1`] = `
 "POST / HTTP/1.1
 accept: application/json
 authorization: Bearer invalid.token.is
@@ -10,7 +10,7 @@ content-length: 11
 hello world"
 `;
 
-exports[`StreamImpersonator does not remove crlf+whitespace from body 1`] = `
+exports[`StreamImpersonator > does not remove crlf+whitespace from body 1`] = `
 "GET / HTTP/1.1
 accept: application/json
 content-type: application/json
@@ -25,7 +25,7 @@ foo
 bar"
 `;
 
-exports[`StreamImpersonator handles all body and headers splitted to separate chunks 1`] = `
+exports[`StreamImpersonator > handles all body and headers splitted to separate chunks 1`] = `
 "POST / HTTP/1.1
 accept: application/json
 content-type: application/json
@@ -36,7 +36,7 @@ impersonate-user: johndoe
 first chunk second chunk"
 `;
 
-exports[`StreamImpersonator handles binary data in body 1`] = `
+exports[`StreamImpersonator > handles binary data in body 1`] = `
 "POST / HTTP/1.1
 accept: application/json
 content-type: application/octet-stream
@@ -47,7 +47,7 @@ impersonate-user: johndoe
 BarÄö"
 `;
 
-exports[`StreamImpersonator handles binary data in body one byte at a time 1`] = `
+exports[`StreamImpersonator > handles binary data in body one byte at a time 1`] = `
 "POST / HTTP/1.1
 accept: application/json
 content-type: application/octet-stream
@@ -58,7 +58,7 @@ impersonate-user: johndoe
 Äö"
 `;
 
-exports[`StreamImpersonator handles body separator splitted to separate chunks 1`] = `
+exports[`StreamImpersonator > handles body separator splitted to separate chunks 1`] = `
 "GET / HTTP/1.1
 accept: application/json
 content-type: application/json
@@ -68,7 +68,7 @@ impersonate-user: johndoe
 "
 `;
 
-exports[`StreamImpersonator handles headers and body in same stream chunk 1`] = `
+exports[`StreamImpersonator > handles headers and body in same stream chunk 1`] = `
 "POST / HTTP/1.1
 accept: application/json
 content-type: application/json
@@ -79,7 +79,7 @@ impersonate-user: johndoe
 first chunk second chunk"
 `;
 
-exports[`StreamImpersonator handles headers in one chunk, body in another 1`] = `
+exports[`StreamImpersonator > handles headers in one chunk, body in another 1`] = `
 "POST / HTTP/1.1
 accept: application/json
 content-type: application/json
@@ -90,7 +90,7 @@ impersonate-user: johndoe
 first chunk second chunk"
 `;
 
-exports[`StreamImpersonator handles http request pipelining 1`] = `
+exports[`StreamImpersonator > handles http request pipelining 1`] = `
 "GET /foo HTTP/1.1
 accept: application/json
 content-type: application/json
@@ -124,7 +124,7 @@ impersonate-user: johndoe
 "
 `;
 
-exports[`StreamImpersonator handles newline splitted to separate chunks 1`] = `
+exports[`StreamImpersonator > handles newline splitted to separate chunks 1`] = `
 "GET / HTTP/1.1
 accept: application/json
 content-type: application/json
@@ -134,7 +134,7 @@ impersonate-user: johndoe
 "
 `;
 
-exports[`StreamImpersonator handles non GET pipelined requests 1`] = `
+exports[`StreamImpersonator > handles non GET pipelined requests 1`] = `
 "GET /version HTTP/1.1
 host: 127.0.0.1:54642
 user-agent: kubectl/v1.21.2 (darwin/amd64) kubernetes/092fbfb
@@ -159,7 +159,7 @@ impersonate-user: johndoe
 {"apiVersion":"authorization.k8s.io/v1","kind":"SelfSubjectAccessReview","spec":{"resourceAttributes":{"namespace":"kube-system","resource":"*","verb":"create"}}}"
 `;
 
-exports[`StreamImpersonator handles port-forward upgrade 1`] = `
+exports[`StreamImpersonator > handles port-forward upgrade 1`] = `
 "POST /apis/authorization.k8s.io/v1/selfsubjectaccessreviews HTTP/1.1
 accept: application/json
 content-type: application/json
@@ -185,7 +185,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3O
 "
 `;
 
-exports[`StreamImpersonator impersonates groups on valid jwt token 1`] = `
+exports[`StreamImpersonator > impersonates groups on valid jwt token 1`] = `
 "GET / HTTP/1.1
 accept: application/json
 content-type: application/json
@@ -197,7 +197,7 @@ impersonate-group: ops
 "
 `;
 
-exports[`StreamImpersonator impersonates on valid jwt token 1`] = `
+exports[`StreamImpersonator > impersonates on valid jwt token 1`] = `
 "GET / HTTP/1.1
 accept: application/json
 content-type: application/json
@@ -207,7 +207,7 @@ impersonate-user: johndoe
 "
 `;
 
-exports[`StreamImpersonator transfer encoding chunked 1`] = `
+exports[`StreamImpersonator > transfer encoding chunked 1`] = `
 "GET /version HTTP/1.1
 host: 127.0.0.1:53364
 user-agent: node-fetch

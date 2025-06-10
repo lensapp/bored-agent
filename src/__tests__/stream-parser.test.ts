@@ -33,7 +33,7 @@ describe("StreamParser", () => {
     expect(parsedKey).toBe(secretKey.toString());
   });
 
-  it ("ignores invalid header value", async () => {
+  it("ignores invalid header value", async () => {
     const keyPairManager = new KeyPairManager("default", serviceAccountTokenProviderMock);
     const stream = new PassThrough();
     const parser = new StreamParser();
@@ -49,15 +49,16 @@ describe("StreamParser", () => {
     };
 
     stream.pipe(parser);
-    stream.cork();
-    expect(async () => {
-      stream.write(header);
 
-      await new Promise((resolve) => {
-        parser.on("data", resolve);
-      });
-    }).rejects.toThrow("decoding error");
+    const promise = new Promise((resolve, reject) => {
+      parser.on("data", resolve);
+      parser.on("error", reject);
+    });
 
+    // Only write *after* listeners are attached:
+    stream.write(header);
+
+    await expect(promise).rejects.toThrow("decoding error");
     expect(parsed).toBeFalsy();
   });
 });

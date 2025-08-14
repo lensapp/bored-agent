@@ -27,6 +27,7 @@ export type AgentProxyDependencies = {
 
 export type StreamHeader = {
   target: string;
+  encrypted: boolean;
 };
 
 const caCert = process.env.CA_CERT || "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt";
@@ -182,11 +183,12 @@ export class AgentProxy {
   handleRequestStream(stream: Stream, data?: Buffer) {
     if (data) {
       let protocol = "";
+      let encrypted = true;
       let header: StreamHeader;
 
       try {
         header = JSON.parse(data.toString()) as StreamHeader;
-
+        encrypted = !!header?.encrypted;
         protocol = header?.target?.split("://")[0];
       } catch (error) {
         logger.error("[PROXY] invalid stream open data: %o", error);
@@ -198,14 +200,14 @@ export class AgentProxy {
 
       switch(protocol) {
         case "unix": {
-          this.handleUnixRequestStream(stream, header.target.replace("unix://", ""));
+          this.handleUnixRequestStream(stream, header.target.replace("unix://", ""), encrypted);
           break;
         }
 
         case "tcp": {
           const url = new URL(header.target);
 
-          this.handleTcpRequestStream(stream, url.hostname, parseInt(url.port));
+          this.handleTcpRequestStream(stream, url.hostname, parseInt(url.port), encrypted);
           break;
         }
 
@@ -219,52 +221,48 @@ export class AgentProxy {
     }
   }
 
-  handleTcpRequestStream(stream: Stream, host: string, port: number) {
+  handleTcpRequestStream(stream: Stream, host: string, port: number, decrypt = true) {
     const socket = net.createConnection(port, host, () => {
-      const parser = new StreamParser();
-
-      parser.bodyParser = (key: Buffer, iv: Buffer) => {
-        const decipher = createDecipheriv(this.cipherAlgorithm, key, iv);
-        const cipher = createCipheriv(this.cipherAlgorithm, key, iv);
-
-        parser.pipe(decipher).pipe(socket).pipe(cipher).pipe(stream);
-      };
-
-      parser.privateKey = this.keys?.private || "";
-
-      try {
-        stream.pipe(parser);
-      } catch (error) {
-        logger.error("[STREAM PARSER] failed to parse stream %s", error);
-        stream.end();
+      if (decrypt) {
+        this.decryptAndPipeStream(stream, socket);
+      } else {
+        stream.pipe(socket).pipe(stream);
       }
     });
 
     this.registerCommonSocketStreamEvents(socket, stream);
   }
 
-  handleUnixRequestStream(stream: Stream, socketPath: string) {
+  handleUnixRequestStream(stream: Stream, socketPath: string, decrypt = true) {
     const socket = net.createConnection(socketPath, () => {
-      const parser = new StreamParser();
-
-      parser.bodyParser = (key: Buffer, iv: Buffer) => {
-        const decipher = createDecipheriv(this.cipherAlgorithm, key, iv);
-        const cipher = createCipheriv(this.cipherAlgorithm, key, iv);
-
-        parser.pipe(decipher).pipe(socket).pipe(cipher).pipe(stream);
-      };
-
-      parser.privateKey = this.keys?.private || "";
-
-      try {
-        stream.pipe(parser);
-      } catch (error) {
-        logger.error("[STREAM PARSER] failed to parse stream %s", error);
-        stream.end();
+      if (decrypt) {
+        this.decryptAndPipeStream(stream, socket);
+      } else {
+        stream.pipe(socket).pipe(stream);
       }
     });
 
     this.registerCommonSocketStreamEvents(socket, stream);
+  }
+
+  private decryptAndPipeStream(stream: Stream, socket: net.Socket) {
+    const parser = new StreamParser();
+
+    parser.bodyParser = (key: Buffer, iv: Buffer) => {
+      const decipher = createDecipheriv(this.cipherAlgorithm, key, iv);
+      const cipher = createCipheriv(this.cipherAlgorithm, key, iv);
+
+      parser.pipe(decipher).pipe(socket).pipe(cipher).pipe(stream);
+    };
+
+    parser.privateKey = this.keys?.private || "";
+
+    try {
+      stream.pipe(parser);
+    } catch (error) {
+      logger.error("[STREAM PARSER] failed to parse stream %s", error);
+      stream.end();
+    }
   }
 
   protected registerCommonSocketStreamEvents(socket: net.Socket, stream: Stream) {

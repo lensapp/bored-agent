@@ -1,4 +1,4 @@
-FROM node:22-bookworm-slim AS build
+FROM node:26-bookworm-slim AS build
 
 RUN mkdir /app
 WORKDIR /app
@@ -10,7 +10,7 @@ RUN apt-get update -y -q && \
     yarn dist && \
     yarn install --frozen-lockfile --prod
 
-FROM node:22-bookworm-slim
+FROM node:26-bookworm-slim
 
 RUN apt-get update -y -q && \
     apt-get upgrade -y -q && \
